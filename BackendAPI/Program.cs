@@ -3,6 +3,7 @@ using BackendAPI.Services;
 using BackendAPI.Repositories;
 using BackendAPI.Mapping;
 using Microsoft.EntityFrameworkCore;
+using BackendAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,11 +21,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add Automapper
+// Automapper
 builder.Services.AddAutoMapper(typeof(ProductProfile));
 
 
 var app = builder.Build();
+// Middleware
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

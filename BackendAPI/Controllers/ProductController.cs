@@ -3,6 +3,8 @@ using BackendAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using BackendAPI.Dtos;
 using AutoMapper;
+using Microsoft.AspNetCore.Http.HttpResults;
+using BackendAPI.Exceptions;
 
 namespace BackendAPI.Controllers;
 
@@ -27,7 +29,6 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var product = await _service.GetByIdAsync(id);
-        if (product == null) return NotFound();
         return Ok(product);
     }
 
