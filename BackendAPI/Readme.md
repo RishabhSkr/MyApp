@@ -1,0 +1,1 @@
+<!-- New-NetFirewallRule -DisplayName "SQL Server TCP 1433" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 1433 -Profile Any -->

@@ -2,6 +2,7 @@ using BackendAPI.Models;
 using BackendAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using BackendAPI.Dtos;
+using AutoMapper;
 
 namespace BackendAPI.Controllers;
 
@@ -31,22 +32,24 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(ProductCreateDtos dto)
+    public async Task<IActionResult> Create(ProductCreateDto dto)
     {
         if(!ModelState.IsValid) 
             return BadRequest(ModelState);
 
-        var created = await _service.CreateAsync(product);
-        return Ok(created);
+        var product = await _service.CreateAsync(dto);
+        return Ok(product);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Product product)
+    public async Task<IActionResult> Update([FromRoute] int id, [FromBody] ProductUpdateDto dto)
     {
-        if (id != product.Id) return BadRequest();
-        await _service.UpdateAsync(product);
+        Console.WriteLine(id.ToString(), dto);
+        if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+        await _service.UpdateAsync(id,dto);
         return NoContent();
-    }
+    }   
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
