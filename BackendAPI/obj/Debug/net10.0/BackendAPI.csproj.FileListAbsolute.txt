@@ -57,6 +57,7 @@ C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\AutoMapper.Ex
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Azure.Core.dll
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Azure.Identity.dll
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Humanizer.dll
+C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Microsoft.AspNetCore.OpenApi.dll
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Microsoft.AspNetCore.Razor.Language.dll
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\bin\Debug\net10.0\Microsoft.Bcl.AsyncInterfaces.dll
