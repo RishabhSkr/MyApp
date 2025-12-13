@@ -14,11 +14,19 @@ public class ProductService : IProductService
         _mapper = mapper;
     }
 
-    public Task<List<Product>> GetAllAsync()
-        => _repository.GetAllAsync();
+    public async Task<IEnumerable<ProductResponseDto>> GetAllAsync()
+    {
+        var products = await _repository.GetAllAsync();
+        return _mapper.Map<IEnumerable<ProductResponseDto>>(products);
+    }
 
-    public Task<Product?> GetByIdAsync(int id)
-        => _repository.GetByIdAsync(id);
+    public async Task<ProductResponseDto?> GetByIdAsync(int id)
+    {
+        var product = await _repository.GetByIdAsync(id);
+        if (product == null) return null;
+
+        return _mapper.Map<ProductResponseDto>(product);
+    }
 
     public async Task<Product> CreateAsync(ProductCreateDto dto)
     {   
