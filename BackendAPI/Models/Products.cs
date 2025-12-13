@@ -11,13 +11,13 @@ namespace BackendAPI.Models
 
         public string Name { get; set; } = string.Empty;
         
-        public string Sku { get; set; } = string.Empty;
+        // public string Sku { get; set; } = string.Empty;
 
-        // "RawMaterial" or "FinishedGood"
-        public string Type { get; set; } = "RawMaterial"; 
+        // // "RawMaterial" or "FinishedGood"
+        // public string Type { get; set; } = "RawMaterial"; 
 
         public decimal Price { get; set; }
         
-        public int StockQuantity { get; set; }
+        // public int StockQuantity { get; set; }
     }
 }
