@@ -1,4 +1,4 @@
-using BackendAPI.Services;
+using BackendAPI.Services.Product;
 using Microsoft.AspNetCore.Mvc;
 using BackendAPI.Dtos.Product;
 using BackendAPI.Exceptions;

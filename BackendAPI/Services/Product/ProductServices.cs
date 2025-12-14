@@ -3,7 +3,8 @@ using BackendAPI.Repositories;
 using BackendAPI.Dtos.Product;
 using AutoMapper;
 using BackendAPI.Exceptions;
-namespace BackendAPI.Services;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+namespace BackendAPI.Services.Product;
 
 public class ProductService : IProductService
 {
@@ -29,7 +30,7 @@ public class ProductService : IProductService
         return _mapper.Map<ProductResponseDto>(product);
     }
 
-    public async Task<Product> CreateAsync(ProductCreateDto dto)
+    public async Task<Models.Product> CreateAsync(ProductCreateDto dto)
     {   
         // manual mapping
         // var Product = new ProductService
@@ -39,7 +40,7 @@ public class ProductService : IProductService
         // };
 
         // automapper
-        var product = _mapper.Map<Product>(dto);
+        var product = _mapper.Map<Models.Product>(dto);
         return await _repository.AddAsync(product);
     }
 
