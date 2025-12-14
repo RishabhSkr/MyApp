@@ -28,7 +28,7 @@ builder.Services.AddSwaggerGen();
 // Automapper
 builder.Services.AddAutoMapper(typeof(ProductProfile));
 
-// TODO: jwt validation-need to be revisit
+// TODO: jwt validation-need to revisit
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
@@ -72,5 +72,15 @@ app.UseAuthentication();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+// seed data
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+    
+    // Yeh line Database seed karegi
+    DbInitializer.Initialize(context);
+}
 
 app.Run();

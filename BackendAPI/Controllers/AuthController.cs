@@ -54,7 +54,7 @@ public class AuthController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        if (!PasswordHelper.Verify(user.PasswordHash??"", dto.Password))
+        if (string.IsNullOrEmpty(user.PasswordHash) || !PasswordHelper.Verify(user.PasswordHash, dto.Password))
             return Unauthorized();
         try
         {

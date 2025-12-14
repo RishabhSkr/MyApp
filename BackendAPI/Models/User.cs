@@ -28,4 +28,7 @@ public class User
 
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+    
+    // Navigation Property 
+    public ICollection<ProductionOrder> ProductionOrders { get; set; } = new List<ProductionOrder>();
 }
