@@ -1,5 +1,5 @@
 using BackendAPI.Models;
-using BackendAPI.Dtos;
+using BackendAPI.Dtos.Product;
 namespace BackendAPI.Services;
 
 public interface IProductService

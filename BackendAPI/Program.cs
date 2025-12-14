@@ -1,6 +1,8 @@
 using BackendAPI.Data;
 using BackendAPI.Services;
+using BackendAPI.Services.Bom;
 using BackendAPI.Repositories;
+using BackendAPI.Repositories.Bom;
 using BackendAPI.Mapping;
 using Microsoft.EntityFrameworkCore;
 using BackendAPI.Middleware;
@@ -20,7 +22,10 @@ builder.Services.AddScoped<JwtService>();
 //  DI
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IBomRepository, BomRepository>();
 
+// Services
+builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

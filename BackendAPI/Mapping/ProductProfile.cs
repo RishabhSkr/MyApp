@@ -1,5 +1,5 @@
 using AutoMapper;
-using BackendAPI.Dtos;
+using BackendAPI.Dtos.Product;
 using BackendAPI.Models;
 
 namespace BackendAPI.Mapping;
@@ -10,7 +10,8 @@ public class ProductProfile : Profile
     {
         CreateMap<ProductCreateDto, Product>();
         CreateMap<ProductUpdateDto, Product>();
-        CreateMap<Product,ProductResponseDto>();
+        CreateMap<Product,ProductResponseDto>()
+            .ForMember(dest => dest.Id,opt => opt.MapFrom(src => src.ProductID));
     }
 
 }

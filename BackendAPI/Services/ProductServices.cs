@@ -1,6 +1,6 @@
 using BackendAPI.Models;
 using BackendAPI.Repositories;
-using BackendAPI.Dtos;
+using BackendAPI.Dtos.Product;
 using AutoMapper;
 using BackendAPI.Exceptions;
 namespace BackendAPI.Services;
@@ -26,7 +26,6 @@ public class ProductService : IProductService
         var product = await _repository.GetByIdAsync(id);
         if (product == null) 
             throw new NotFoundException("Product not found");
-
         return _mapper.Map<ProductResponseDto>(product);
     }
 
