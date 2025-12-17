@@ -11,7 +11,7 @@ public class ProductProfile : Profile
         CreateMap<ProductCreateDto, Product>();
         CreateMap<ProductUpdateDto, Product>();
         CreateMap<Product,ProductResponseDto>()
-            .ForMember(dest => dest.Id,opt => opt.MapFrom(src => src.ProductID));
+            .ForMember(dest => dest.Id,opt => opt.MapFrom(src => src.ProductId));
     }
 
 }

@@ -6,7 +6,7 @@ namespace BackendAPI.Models;
 public class User
 {
     [Key]
-    public int UserID { get; set; }
+    public int UserId { get; set; }
 
     [Required]
     [MaxLength(50)]
@@ -21,12 +21,11 @@ public class User
 
     // 🔑 Foreign Key
     [ForeignKey(nameof(Role))]
-    public int RoleID { get; set; }
+    public int RoleId { get; set; }
 
     // Navigation Property
     public Role? Role { get; set; }
 
-    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     
     // Navigation Property 

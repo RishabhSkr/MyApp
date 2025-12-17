@@ -5,7 +5,7 @@ namespace BackendAPI.Models;
 public class Role
 {
     [Key]
-    public int RoleID { get; set; }
+    public int RoleId { get; set; }
 
     [Required]
     [MaxLength(50)]

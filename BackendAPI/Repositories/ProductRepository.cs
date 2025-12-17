@@ -13,6 +13,10 @@ public class ProductRepository : IProductRepository
         _context = context;
     }
 
+    public async Task<bool> ExistsByNameAsync(string name)
+    {
+        return await _context.Products.AnyAsync(p => p.Name == name);
+    }
     public async Task<List<Product>> GetAllAsync()
     {
         return await _context.Products.ToListAsync();

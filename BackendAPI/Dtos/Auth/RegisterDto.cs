@@ -14,5 +14,5 @@ public class RegisterDto
     public string Password { get; set; } = string.Empty;
 
     [Required]
-    public int RoleID { get; set; }
+    public int RoleId { get; set; }
 }

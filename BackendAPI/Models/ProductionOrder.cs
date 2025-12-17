@@ -6,15 +6,15 @@ using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 public class ProductionOrder
 {
     [Key]
-    public int ProductionOrderID { get; set; }
+    public int ProductionOrderId { get; set; }
     // Link to SalesOrder
     [ForeignKey(nameof(SalesOrder))]
-    public int SalesOrderID { get; set; }
+    public int SalesOrderId { get; set; }
     public SalesOrder SalesOrder { get; set; } = null!;
 
     // Link to Product
-    public int ProductID { get; set; }
-    [ForeignKey("ProductID")]
+    public int ProductId { get; set; }
+    [ForeignKey("ProductId")]
     public virtual Product? Product { get; set; }
     //  Qty
     public decimal PlannedQuantity { get; set; }
@@ -29,4 +29,8 @@ public class ProductionOrder
 
     public DateTime? StartDate { get; set; } 
     public DateTime? CompletedDate { get; set; }
+
+    // acutal start - end date
+    public DateTime? ActualStartDate { get; set; }
+    public DateTime? ActualEndDate { get; set; } 
 }

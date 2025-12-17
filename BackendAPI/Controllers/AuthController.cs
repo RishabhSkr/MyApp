@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto dto)
     {
-        var role = await _context.Roles.FindAsync(dto.RoleID);
+        var role = await _context.Roles.FindAsync(dto.RoleId);
         if (role == null) return BadRequest("Invalid role");
 
         var user = new User
@@ -33,7 +33,7 @@ public class AuthController : ControllerBase
             Username = dto.Username,
             Email = dto.Email,
             PasswordHash = PasswordHelper.HashPassword(dto.Password),
-            RoleID = dto.RoleID
+            RoleId = dto.RoleId
         };
 
         _context.Users.Add(user);
@@ -59,7 +59,7 @@ public class AuthController : ControllerBase
         try
         {
             /* 
-                { "error": "Token Generation Failed", "details": "IDX10653: The encryption algorithm 'HS256' requires a key size of at least '128' bits.
+                { "error": "Token Generation Failed", "details": "IdX10653: The encryption algorithm 'HS256' requires a key size of at least '128' bits.
                 Key '[PII of type 'Microsoft.IdentityModel.Tokens.SymmetricSecurityKey' is hidden. 
                 For more details, see https://aka.ms/IdentityModel/PII.]', is of size: '120'. (Parameter 'key')"}
             */

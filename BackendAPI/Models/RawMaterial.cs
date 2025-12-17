@@ -5,7 +5,7 @@ namespace BackendAPI.Models
     public class RawMaterial
     {
         [Key]
-        public int RawMaterialID { get; set; }
+        public int RawMaterialId { get; set; }
 
         [Required]
         public string Name { get; set; } = string.Empty; // e.g. "Wood Plank", "Milk"

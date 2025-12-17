@@ -32,6 +32,12 @@ public class ProductService : IProductService
 
     public async Task<Models.Product> CreateAsync(ProductCreateDto dto)
     {   
+        bool exists = await _repository.ExistsByNameAsync(dto.Name);
+        
+        if (exists)
+        {
+            throw new Exception($"Product with name '{dto.Name}' already exists.");
+        }
         // manual mapping
         // var Product = new ProductService
         // {
@@ -41,6 +47,7 @@ public class ProductService : IProductService
 
         // automapper
         var product = _mapper.Map<Models.Product>(dto);
+        Console.WriteLine(product);
         return await _repository.AddAsync(product);
     }
 
@@ -48,7 +55,7 @@ public class ProductService : IProductService
     {
         var productToUpdate = await _repository.GetByIdAsync(id);
         if (productToUpdate == null)
-            throw new Exception("Product not found");
+            throw new NotFoundException("Product not found");
         _mapper.Map(dto, productToUpdate);
         await _repository.UpdateAsync(productToUpdate);
     }

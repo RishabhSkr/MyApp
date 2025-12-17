@@ -16,7 +16,7 @@ namespace BackendAPI.Data
         // This tells .NET: "I want a table called 'Products(Collection)' based on the 'Product' class"
         public DbSet<Product> Products { get; set; }
         public DbSet<RawMaterial> RawMaterials { get; set; } 
-        public DbSet<Bom> BOMs { get; set; }
+        public DbSet<Bom> BOM { get; set; }
 
         // Inventories
         public DbSet<RawMaterialInventory> RawMaterialInventories { get; set; } 
@@ -27,89 +27,87 @@ namespace BackendAPI.Data
         public DbSet<ProductionOrder> ProductionOrders { get; set; }
 
         // FluentAPI Validation Rules
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
+       protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
             modelBuilder.Entity<Role>()
                 .HasMany(r => r.Users)
                 .WithOne(u => u.Role)
-                .HasForeignKey(u => u.RoleID);
-            
-            // seed Roles
-            modelBuilder.Entity<Role>().HasData(
-                new Role { RoleID = 1, RoleName = "Admin" },
-                new Role { RoleID = 2, RoleName = "Sales" },
-                new Role { RoleID = 3, RoleName = "Production" }
-            );
-
-            
-        // Diamond Problem: No Action on delete
-            // Stop Cascade Delete for SalesOrder -> ProductionOrder
+                .HasForeignKey(u => u.RoleId);
+                
+            // PRODUCTION ORDER RELATIONSHIPS
+        
             modelBuilder.Entity<ProductionOrder>()
                 .HasOne(p => p.SalesOrder)
                 .WithMany()
-                .HasForeignKey(p => p.SalesOrderID)
+                .HasForeignKey(p => p.SalesOrderId)
                 .OnDelete(DeleteBehavior.Restrict); 
 
-            //  Stop Cascade Delete for Product -> ProductionOrder
             modelBuilder.Entity<ProductionOrder>()
                 .HasOne(p => p.Product)
                 .WithMany()
-                .HasForeignKey(p => p.ProductID)
+                .HasForeignKey(p => p.ProductId) // Ensure small 'd'
                 .OnDelete(DeleteBehavior.Restrict); 
 
-                
-            modelBuilder.Entity<FinishedGoodsInventory>()
-                .HasOne(f => f.Product)       // Inventory link Product
-                .WithMany()                   // one to one link 
-                .HasForeignKey(f => f.ProductID) // Link via ProductID
-                .OnDelete(DeleteBehavior.Restrict); // Product delete hone par Inventory record safe 
-                
-            // User Link
             modelBuilder.Entity<ProductionOrder>()
                 .HasOne(p => p.CreatedByUser)
-                .WithMany(u => u.ProductionOrders) // User ke pass list hai
+                .WithMany(u => u.ProductionOrders)
                 .HasForeignKey(p => p.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict); 
 
-            // [Composite Key] 
-            // Iska matlab: Ek BOM entry mein (ProductId + RawMaterialId) unique honge.
-            // to stop duplicate entries
+        
+            // 2. BOM RELATIONSHIPS (THE FIX)
+            // Composite Key: A Product cannot have duplicate RawMaterials
             modelBuilder.Entity<Bom>()
-                .HasIndex(b => new { b.ProductID, b.RawMaterialId }).IsUnique();
+                .HasIndex(b => new { b.ProductId, b.RawMaterialId }) 
+                .IsUnique();
 
-            // in RM delete krne pr saare jagah jaha use hua  whan se delete na ho
+            // Link to Product
+            modelBuilder.Entity<Bom>()
+                .HasOne(b => b.Product)
+                .WithMany(p => p.Boms) // Product has a list of Boms
+                .HasForeignKey(b => b.ProductId) // <--- CRITICAL: Must match Model (ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // Changed from NoAction to Restrict for safety
+
+            // Link to RawMaterial
             modelBuilder.Entity<Bom>()
                 .HasOne(b => b.RawMaterial)
                 .WithMany()
                 .HasForeignKey(b => b.RawMaterialId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
+            // Link to User
+            modelBuilder.Entity<Bom>()
+                .HasOne(b => b.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(b => b.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict); 
+
+
+            // SALES ORDER & INVENTORY
+            modelBuilder.Entity<SalesOrder>()
+                .HasOne(s => s.CreatedByUser)
+                .WithMany() // Assuming User doesn't need a list of SalesOrders, or update User model
+                .HasForeignKey(s => s.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<FinishedGoodsInventory>()
+                .HasOne(f => f.Product)      
+                .WithMany()                  
+                .HasForeignKey(f => f.ProductId) 
+                .OnDelete(DeleteBehavior.Restrict); 
+
             // RM-Inventory (One to One Mapping)
             modelBuilder.Entity<RawMaterial>()
-                .HasOne(r => r.Inventory)          // RawMaterial has One Inventory
-                .WithOne(i => i.RawMaterial)       // Inventory has One RawMaterial
-                .HasForeignKey<RawMaterialInventory>(i => i.RawMaterialID); // fetched from RawMaterialInventory
-            
-            // decimal precision rules
-            modelBuilder.Entity<Bom>()
-                .Property(b => b.QuantityRequired)
-                .HasPrecision(18, 2);
+                .HasOne(r => r.Inventory)          
+                .WithOne(i => i.RawMaterial)       
+                .HasForeignKey<RawMaterialInventory>(i => i.RawMaterialId);
 
-            modelBuilder.Entity<RawMaterialInventory>()
-                .Property(b => b.AvailableQuantity)
-                .HasPrecision(18, 2);
-            
-            modelBuilder.Entity<FinishedGoodsInventory>()
-                .Property(b => b.AvailableQuantity)
-                .HasPrecision(18, 2);
-            
-            modelBuilder.Entity<ProductionOrder>()
-                .Property(b => b.PlannedQuantity)
-                .HasPrecision(18, 2);
-            
-            modelBuilder.Entity<ProductionOrder>()
-                .Property(b => b.ProducedQuantity)
-                .HasPrecision(18, 2);
+            // PRECISION Rules
+            modelBuilder.Entity<Bom>().Property(b => b.QuantityRequired).HasPrecision(18, 2);
+            modelBuilder.Entity<RawMaterialInventory>().Property(b => b.AvailableQuantity).HasPrecision(18, 2);
+            modelBuilder.Entity<FinishedGoodsInventory>().Property(b => b.AvailableQuantity).HasPrecision(18, 2);
+            modelBuilder.Entity<ProductionOrder>().Property(b => b.PlannedQuantity).HasPrecision(18, 2);
+            modelBuilder.Entity<ProductionOrder>().Property(b => b.ProducedQuantity).HasPrecision(18, 2);
         }
     }
 }

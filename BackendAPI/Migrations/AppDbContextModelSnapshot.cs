@@ -30,7 +30,13 @@ namespace BackendAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ProductID")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("QuantityRequired")
@@ -42,12 +48,14 @@ namespace BackendAPI.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("RawMaterialId");
 
-                    b.HasIndex("ProductID", "RawMaterialId")
+                    b.HasIndex("ProductId", "RawMaterialId")
                         .IsUnique();
 
-                    b.ToTable("BOMs");
+                    b.ToTable("BOM");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.FinishedGoodsInventory", b =>
@@ -65,40 +73,53 @@ namespace BackendAPI.Migrations
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ProductID")
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdatedByUserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductID");
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("FinishedGoodsInventories");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.Product", b =>
                 {
-                    b.Property<int>("ProductID")
+                    b.Property<int>("ProductId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("ProductID");
+                    b.HasKey("ProductId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Products");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.RawMaterial", b =>
                 {
-                    b.Property<int>("RawMaterialID")
+                    b.Property<int>("RawMaterialId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RawMaterialID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RawMaterialId"));
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -108,18 +129,18 @@ namespace BackendAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("RawMaterialID");
+                    b.HasKey("RawMaterialId");
 
                     b.ToTable("RawMaterials");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.RawMaterialInventory", b =>
                 {
-                    b.Property<int>("InventoryID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AvailableQuantity")
                         .HasPrecision(18, 2)
@@ -128,59 +149,47 @@ namespace BackendAPI.Migrations
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RawMaterialID")
+                    b.Property<int>("RawMaterialId")
                         .HasColumnType("int");
 
-                    b.HasKey("InventoryID");
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("RawMaterialID")
+                    b.HasKey("Id");
+
+                    b.HasIndex("RawMaterialId")
                         .IsUnique();
+
+                    b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("RawMaterialInventories");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.Role", b =>
                 {
-                    b.Property<int>("RoleID")
+                    b.Property<int>("RoleId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoleId"));
 
                     b.Property<string>("RoleName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("RoleID");
+                    b.HasKey("RoleId");
 
                     b.ToTable("Roles");
-
-                    b.HasData(
-                        new
-                        {
-                            RoleID = 1,
-                            RoleName = "Admin"
-                        },
-                        new
-                        {
-                            RoleID = 2,
-                            RoleName = "Sales"
-                        },
-                        new
-                        {
-                            RoleID = 3,
-                            RoleName = "Production"
-                        });
                 });
 
             modelBuilder.Entity("BackendAPI.Models.SalesOrder", b =>
                 {
-                    b.Property<int>("SalesOrderID")
+                    b.Property<int>("SalesOrderId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderId"));
 
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
@@ -192,7 +201,7 @@ namespace BackendAPI.Migrations
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ProductID")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
@@ -202,22 +211,22 @@ namespace BackendAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("SalesOrderID");
+                    b.HasKey("SalesOrderId");
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("ProductID");
+                    b.HasIndex("ProductId");
 
                     b.ToTable("SalesOrders");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.User", b =>
                 {
-                    b.Property<int>("UserID")
+                    b.Property<int>("UserId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -226,14 +235,11 @@ namespace BackendAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("RoleID")
+                    b.Property<int>("RoleId")
                         .HasColumnType("int");
 
                     b.Property<string>("Username")
@@ -241,20 +247,26 @@ namespace BackendAPI.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("UserID");
+                    b.HasKey("UserId");
 
-                    b.HasIndex("RoleID");
+                    b.HasIndex("RoleId");
 
                     b.ToTable("Users");
                 });
 
             modelBuilder.Entity("ProductionOrder", b =>
                 {
-                    b.Property<int>("ProductionOrderID")
+                    b.Property<int>("ProductionOrderId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductionOrderID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductionOrderId"));
+
+                    b.Property<DateTime?>("ActualEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ActualStartDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("datetime2");
@@ -270,10 +282,10 @@ namespace BackendAPI.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ProductID")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("SalesOrderID")
+                    b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("StartDate")
@@ -283,23 +295,29 @@ namespace BackendAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("ProductionOrderID");
+                    b.HasKey("ProductionOrderId");
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("ProductID");
+                    b.HasIndex("ProductId");
 
-                    b.HasIndex("SalesOrderID");
+                    b.HasIndex("SalesOrderId");
 
                     b.ToTable("ProductionOrders");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.Bom", b =>
                 {
+                    b.HasOne("BackendAPI.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BackendAPI.Models.Product", "Product")
                         .WithMany("Boms")
-                        .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BackendAPI.Models.RawMaterial", "RawMaterial")
@@ -307,6 +325,8 @@ namespace BackendAPI.Migrations
                         .HasForeignKey("RawMaterialId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Product");
 
@@ -317,25 +337,22 @@ namespace BackendAPI.Migrations
                 {
                     b.HasOne("BackendAPI.Models.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ProductID")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("BackendAPI.Models.RawMaterialInventory", b =>
-                {
-                    b.HasOne("BackendAPI.Models.RawMaterial", "RawMaterial")
-                        .WithOne("Inventory")
-                        .HasForeignKey("BackendAPI.Models.RawMaterialInventory", "RawMaterialID")
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUserIdUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("RawMaterial");
+                    b.Navigation("Product");
+
+                    b.Navigation("UpdatedByUserIdUser");
                 });
 
-            modelBuilder.Entity("BackendAPI.Models.SalesOrder", b =>
+            modelBuilder.Entity("BackendAPI.Models.Product", b =>
                 {
                     b.HasOne("BackendAPI.Models.User", "CreatedByUser")
                         .WithMany()
@@ -343,9 +360,39 @@ namespace BackendAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("BackendAPI.Models.RawMaterialInventory", b =>
+                {
+                    b.HasOne("BackendAPI.Models.RawMaterial", "RawMaterial")
+                        .WithOne("Inventory")
+                        .HasForeignKey("BackendAPI.Models.RawMaterialInventory", "RawMaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUserIdUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RawMaterial");
+
+                    b.Navigation("UpdatedByUserIdUser");
+                });
+
+            modelBuilder.Entity("BackendAPI.Models.SalesOrder", b =>
+                {
+                    b.HasOne("BackendAPI.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BackendAPI.Models.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ProductID")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -358,7 +405,7 @@ namespace BackendAPI.Migrations
                 {
                     b.HasOne("BackendAPI.Models.Role", "Role")
                         .WithMany("Users")
-                        .HasForeignKey("RoleID")
+                        .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -375,13 +422,13 @@ namespace BackendAPI.Migrations
 
                     b.HasOne("BackendAPI.Models.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ProductID")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BackendAPI.Models.SalesOrder", "SalesOrder")
                         .WithMany()
-                        .HasForeignKey("SalesOrderID")
+                        .HasForeignKey("SalesOrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
