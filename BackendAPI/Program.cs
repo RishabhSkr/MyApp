@@ -1,14 +1,21 @@
 using BackendAPI.Data;
-using BackendAPI.Services.Product;
-using BackendAPI.Services;
-using BackendAPI.Services.Bom;
-using BackendAPI.Repositories.ProductRepository;
-using BackendAPI.Repositories.BomRepository;
 using BackendAPI.Mapping;
 using Microsoft.EntityFrameworkCore;
 using BackendAPI.Middleware;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using BackendAPI.Services;
+// Services
+using BackendAPI.Services.Product;
+using BackendAPI.Services.Production;
+using BackendAPI.Services.Bom;
+
+// Repositories
+using BackendAPI.Repositories.ProductRepository;
+using BackendAPI.Repositories.BomRepository;
+using BackendAPI.Repositories.ProductionRepository;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,11 +29,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<JwtService>();
 //  DI
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductionRepository,ProductionRepository>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
 
 // Services
 builder.Services.AddScoped<IBomService, BomService>();
+builder.Services.AddScoped<IProductionService,ProductionService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

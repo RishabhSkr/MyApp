@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-
-using BackendAPI.Models;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
+
+namespace BackendAPI.Models;
 public class ProductionOrder : AuditableEntity
 {
     [Key]
