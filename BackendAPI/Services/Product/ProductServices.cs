@@ -1,9 +1,11 @@
-using BackendAPI.Models;
-using BackendAPI.Repositories;
+using ProductEntity = BackendAPI.Models.Product;
+using BackendAPI.Repositories.ProductRepository;
 using BackendAPI.Dtos.Product;
 using AutoMapper;
 using BackendAPI.Exceptions;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+
+
 namespace BackendAPI.Services.Product;
 
 public class ProductService : IProductService
@@ -30,34 +32,39 @@ public class ProductService : IProductService
         return _mapper.Map<ProductResponseDto>(product);
     }
 
-    public async Task<Models.Product> CreateAsync(ProductCreateDto dto)
-    {   
-        bool exists = await _repository.ExistsByNameAsync(dto.Name);
-        
-        if (exists)
-        {
-            throw new Exception($"Product with name '{dto.Name}' already exists.");
-        }
-        // manual mapping
-        // var Product = new ProductService
-        // {
-        //     Name = dto.Name,
-        //     Price = dto.Price
-        // };
+    public async Task<ProductResponseDto> CreateAsync(ProductCreateDto dto, int userId)
+    {
+        // 1. Validation
+        if (await _repository.ExistsByNameAsync(dto.Name))
+            throw new BadRequestException("Product already exists.");
 
-        // automapper
-        var product = _mapper.Map<Models.Product>(dto);
-        Console.WriteLine(product);
-        return await _repository.AddAsync(product);
+        // 2. Map DTO to Entity
+        var product = _mapper.Map<ProductEntity>(dto);
+
+        // 3. SET AUDIT FIELD (Manual Step)
+        // CreatedAt automatic hai (DbContext karega), lekin UserId humein dena padega
+        product.CreatedByUserId = userId; 
+
+        // 4. Save
+        var createdProduct = await _repository.AddAsync(product);
+        return _mapper.Map<ProductResponseDto>(createdProduct);
     }
 
-    public async Task UpdateAsync(int id,ProductUpdateDto dto)
-    {
-        var productToUpdate = await _repository.GetByIdAsync(id);
-        if (productToUpdate == null)
-            throw new NotFoundException("Product not found");
-        _mapper.Map(dto, productToUpdate);
-        await _repository.UpdateAsync(productToUpdate);
+    public async Task UpdateAsync(int id, ProductUpdateDto dto, int userId)
+    {   var product = await _repository.GetByIdAsync(id);
+        if (product == null) throw new NotFoundException("Product not found");
+
+            // Agar naam change ho raha hai to duplicate check
+            var alreadyNameExists = await _repository.ExistsByNameAsync(dto.Name);
+            if (product.Name != dto.Name && alreadyNameExists)
+                throw new BadRequestException("Product name already taken.");
+
+            _mapper.Map(dto, product);
+
+            // Set Audit Field
+            product.UpdatedByUserId = userId;
+
+            await _repository.UpdateAsync(product);
     }
 
     public Task DeleteAsync(int id)

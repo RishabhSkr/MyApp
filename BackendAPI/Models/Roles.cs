@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-
+using System.ComponentModel.DataAnnotations.Schema; // <-- YEH MISSING HAI
 namespace BackendAPI.Models;
 
 public class Role
@@ -10,7 +10,6 @@ public class Role
     [Required]
     [MaxLength(50)]
     public string? RoleName { get; set; }
-
     // Navigation Property
     public ICollection<User> Users { get; set; } = new List<User>(); //NullReferenceException
 }

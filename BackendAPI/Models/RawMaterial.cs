@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BackendAPI.Models
 {
-    public class RawMaterial
+    public class RawMaterial:AuditableEntity
     {
         [Key]
         public int RawMaterialId { get; set; }

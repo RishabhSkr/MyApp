@@ -6,7 +6,7 @@ namespace BackendAPI.Dtos.Bom
     public class BomCreateDto
     {
         [Required]
-        public int productId { get; set; }
+        public int ProductId { get; set; }
 
         [Required]
         [MinLength(1, ErrorMessage = "At least one material is required")]

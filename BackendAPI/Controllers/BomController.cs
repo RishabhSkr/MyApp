@@ -15,25 +15,55 @@ namespace BackendAPI.Controllers
             _service = service;
         }
 
-        [HttpGet("product/{productId}")]
-        public async Task<IActionResult> GetByProduct(int productId)
+        // 1. GET ALL
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetBomByProductAsync(productId);
+            var result = await _service.GetAllBomsAsync();
             return Ok(result);
         }
 
-        [HttpPost("create")]
+        // 2. GET BY ID (Already Done - Just for Reference)
+        [HttpGet("{productId}")]
+        public async Task<IActionResult> Get(int productId)
+        {
+            var result = await _service.GetBomByProductAsync(productId);
+            if (result == null) return NotFound("BOM not found.");
+            return Ok(result);
+        }
+
+        // 3. CREATE (Already Done - Added UserId)
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] BomCreateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            int userId = 1; // TODO: JWT User
+            var result = await _service.CreateBomAsync(dto, userId);
 
-            var result = await _service.CreateBomAsync(dto);
+            if (result == "Success") return Ok(new { message = "BOM Created" });
+            return BadRequest(new { error = result });
+        }
 
-            if (result == "Success")
-                return Ok(new { message = "BOM Created Successfully" });
+        // 4. UPDATE (New)
+        [HttpPut("{productId}")]
+        public async Task<IActionResult> Update(int productId, [FromBody] BomCreateDto dto)
+        {
+            int userId = 1; // TODO: JWT User
+            
+            // Note: Update logic me hum purana hata kar naya daal rahe hain
+            var result = await _service.UpdateBomAsync(productId, dto, userId);
 
-            return BadRequest(new { message = result });
-        }   
+            if (result == "Success") return Ok(new { message = "BOM Updated Successfully" });
+            return BadRequest(new { error = result });
+        }
+
+        // 5. DELETE (New)
+        [HttpDelete("{productId}")]
+        public async Task<IActionResult> Delete(int productId)
+        {
+            var result = await _service.DeleteBomAsync(productId);
+
+            if (result == "Success") return Ok(new { message = "BOM Deleted Successfully" });
+            return BadRequest(new { error = result });
+        }
     }
 }

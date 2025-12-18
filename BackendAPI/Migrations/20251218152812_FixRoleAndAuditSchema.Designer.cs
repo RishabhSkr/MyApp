@@ -4,6 +4,7 @@ using BackendAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BackendAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251218152812_FixRoleAndAuditSchema")]
+    partial class FixRoleAndAuditSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,8 +67,7 @@ namespace BackendAPI.Migrations
                     b.HasIndex("UpdatedByUserId");
 
                     b.HasIndex("ProductId", "RawMaterialId")
-                        .IsUnique()
-                        .HasFilter("[IsActive] = 1");
+                        .IsUnique();
 
                     b.ToTable("BOMs");
                 });
@@ -100,13 +102,16 @@ namespace BackendAPI.Migrations
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
-                    b.HasKey("Id");
+                    b.Property<int?>("UpdatedByUserUserId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("CreatedByUserId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
                     b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("UpdatedByUserUserId");
 
                     b.ToTable("FinishedGoodsInventories");
                 });
@@ -138,11 +143,16 @@ namespace BackendAPI.Migrations
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UpdatedByUserUserId")
+                        .HasColumnType("int");
+
                     b.HasKey("ProductId");
 
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("UpdatedByUserUserId");
 
                     b.ToTable("Products");
                 });
@@ -180,8 +190,6 @@ namespace BackendAPI.Migrations
 
                     b.HasKey("RawMaterialId");
 
-                    b.HasIndex("CreatedByUserId");
-
                     b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("RawMaterials");
@@ -217,6 +225,9 @@ namespace BackendAPI.Migrations
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UpdatedByUserUserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
@@ -225,6 +236,8 @@ namespace BackendAPI.Migrations
                         .IsUnique();
 
                     b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("UpdatedByUserUserId");
 
                     b.ToTable("RawMaterialInventories");
                 });
@@ -287,6 +300,9 @@ namespace BackendAPI.Migrations
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("UpdatedByUserUserId")
+                        .HasColumnType("int");
+
                     b.HasKey("SalesOrderId");
 
                     b.HasIndex("CreatedByUserId");
@@ -294,6 +310,8 @@ namespace BackendAPI.Migrations
                     b.HasIndex("ProductId");
 
                     b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("UpdatedByUserUserId");
 
                     b.ToTable("SalesOrders");
                 });
@@ -418,7 +436,7 @@ namespace BackendAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -428,30 +446,24 @@ namespace BackendAPI.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("RawMaterial");
-
-                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.FinishedGoodsInventory", b =>
                 {
-                    b.HasOne("BackendAPI.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("BackendAPI.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("CreatedByUser");
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserUserId");
 
                     b.Navigation("Product");
 
@@ -463,13 +475,17 @@ namespace BackendAPI.Migrations
                     b.HasOne("BackendAPI.Models.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserUserId");
 
                     b.Navigation("CreatedByUser");
 
@@ -478,20 +494,10 @@ namespace BackendAPI.Migrations
 
             modelBuilder.Entity("BackendAPI.Models.RawMaterial", b =>
                 {
-                    b.HasOne("BackendAPI.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.RawMaterialInventory", b =>
@@ -499,7 +505,7 @@ namespace BackendAPI.Migrations
                     b.HasOne("BackendAPI.Models.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BackendAPI.Models.RawMaterial", "RawMaterial")
@@ -508,10 +514,14 @@ namespace BackendAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserUserId");
 
                     b.Navigation("CreatedByUser");
 
@@ -534,10 +544,14 @@ namespace BackendAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserUserId");
 
                     b.Navigation("CreatedByUser");
 
@@ -577,7 +591,7 @@ namespace BackendAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BackendAPI.Models.User", "UpdatedByUser")
+                    b.HasOne("BackendAPI.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UpdatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -587,8 +601,6 @@ namespace BackendAPI.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("SalesOrder");
-
-                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.Product", b =>

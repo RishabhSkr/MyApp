@@ -19,13 +19,27 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
-        catch (NotFoundException ex)
-        {
-            await HandleException(context, HttpStatusCode.NotFound, ex.Message);
-        }
         catch (Exception ex)
-        {
-            await HandleException(context, HttpStatusCode.InternalServerError, "Something went wrong");
+        {   
+            // Console.WriteLine(ex.Message);
+            var statusCode = ex switch
+            {
+                NotFoundException => HttpStatusCode.NotFound,
+                BadRequestException => HttpStatusCode.BadRequest,
+                UnauthorizedException => HttpStatusCode.Unauthorized,
+                ForbiddenException => HttpStatusCode.Forbidden,
+                _ => HttpStatusCode.InternalServerError
+                
+            };
+            var msg = ex switch
+            {
+                NotFoundException => ex.Message,
+                BadRequestException => ex.Message,
+                UnauthorizedException => ex.Message,
+                ForbiddenException => ex.Message,
+                _ => "Something went wrong"
+            };
+            await HandleException(context, HttpStatusCode.InternalServerError, msg);
         }
     }
 

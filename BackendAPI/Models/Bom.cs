@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BackendAPI.Models;
 
-public class Bom
+public class Bom:AuditableEntity
 {
     [Key]
     public int Id { get; set; }
@@ -19,11 +19,4 @@ public class Bom
 
     [Required]
     public decimal QuantityRequired { get; set; }
-
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-    public int CreatedByUserId { get; set; }
-    
-    [ForeignKey(nameof(CreatedByUserId))]
-    public User? CreatedByUser { get; set; }
 }

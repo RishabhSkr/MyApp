@@ -3,16 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BackendAPI.Models
 {
-    public class SalesOrder
+    public class SalesOrder:AuditableEntity
     {
         [Key]
         public int SalesOrderId { get; set; }
 
-        public string CustomerName { get; set; } = string.Empty; // e.g. "Rahul Traders"
+        public string CustomerName { get; set; } = string.Empty; 
 
         public DateTime OrderDate { get; set; } = DateTime.Now;
 
-        // "Pending Production", "In Production", "Ready to Dispatch"
+        // "Pending", "In-Transit", "Completed"
         public string Status { get; set; } = "Pending";
 
         // Product (Kya becha?) 
@@ -20,13 +20,8 @@ namespace BackendAPI.Models
         [ForeignKey("ProductId")]
         public virtual Product? Product { get; set; }
 
-        // --- Quantity (Planned) ---
+        // Quantity (Planned) 
         public int Quantity { get; set; } 
-        
-        // link to Users
-        public int CreatedByUserId { get; set; }
-       [ForeignKey(nameof(CreatedByUserId))]
-        public virtual User? CreatedByUser { get; set; }
 
     }
 }

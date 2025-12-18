@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 using BackendAPI.Models;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
-public class ProductionOrder
+public class ProductionOrder : AuditableEntity
 {
     [Key]
     public int ProductionOrderId { get; set; }
@@ -21,11 +21,6 @@ public class ProductionOrder
     public decimal ProducedQuantity { get; set; } = 0;
     // State -> Planned - Inprogress- Completed
     public string Status { get; set; }="Planned";
-    
-    // Link to User
-    public int CreatedByUserId { get; set; }
-    [ForeignKey(nameof(CreatedByUserId))]
-    public virtual User? CreatedByUser { get; set; }
 
     public DateTime? StartDate { get; set; } 
     public DateTime? CompletedDate { get; set; }
@@ -33,4 +28,5 @@ public class ProductionOrder
     // acutal start - end date
     public DateTime? ActualStartDate { get; set; }
     public DateTime? ActualEndDate { get; set; } 
+
 }

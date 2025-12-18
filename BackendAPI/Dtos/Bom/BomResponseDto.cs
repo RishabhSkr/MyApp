@@ -1,19 +1,21 @@
 namespace BackendAPI.Dtos.Bom
 {
-    // Parent DTO
     public class BomResponseDto
     {
-        public int productId { get; set; }
-        public string productName { get; set; } = string.Empty; 
-        public List<BomResponseItemDto> BomItems { get; set; } = new();
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        
+        // List of Materials
+        public List<BomItemDto> Materials { get; set; } = new();
     }
 
-    // Child DTO (Output)
-    public class BomResponseItemDto
+    // 2. Child DTO 
+    public class BomItemDto
     {
         public int RawMaterialId { get; set; }
-        public string RawMaterialName { get; set; } = string.Empty; 
-        public string SKU { get; set; } = string.Empty;
+        public string RawMaterialName { get; set; } = string.Empty;
+         public string SKU { get; set; } = string.Empty;
         public decimal QuantityRequired { get; set; }
+        public string Unit { get; set; } = "Unit";
     }
 }

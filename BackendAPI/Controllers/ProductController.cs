@@ -32,19 +32,19 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(ProductCreateDto dto)
     {
-        if(!ModelState.IsValid) 
-            return BadRequest(ModelState);
-
-        var product = await _service.CreateAsync(dto);
-        return Ok(product);
+        // TODO: Jab JWT lag jayega, tab User.Claims se nikalenge
+        //? Hardcoded
+        int currentUserId = 1; 
+        var result = await _service.CreateAsync(dto, currentUserId);
+        return Ok(result);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update([FromRoute] int id, [FromBody] ProductUpdateDto dto)
     {
-        if (!ModelState.IsValid)
-        return BadRequest(ModelState);
-        await _service.UpdateAsync(id,dto);
+        // TODO: Jab JWT lag jayega, tab User.Claims se nikalenge
+        int currentUserId = 1; // Hardcoded for testing
+        await _service.UpdateAsync(id, dto, currentUserId);
         return Ok("Product updated successfully");
     }   
 

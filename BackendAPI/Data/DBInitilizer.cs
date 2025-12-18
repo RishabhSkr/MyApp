@@ -39,7 +39,6 @@ namespace BackendAPI.Data
             // ==========================================
             if (!context.Users.Any())
             {
-                // Roles fetch
                 var adminRole = context.Roles.First(r => r.RoleName == "Admin");
                 var salesRole = context.Roles.First(r => r.RoleName == "Sales");
                 var prodRole = context.Roles.First(r => r.RoleName == "Production");
@@ -50,6 +49,7 @@ namespace BackendAPI.Data
                     Email = "admin@erp.com", 
                     PasswordHash = "admin123", 
                     RoleId = adminRole.RoleId,
+                    CreatedAt = DateTime.Now // User Auditable nahi hai, manually date daal rahe hain
                 };
 
                 var salesUser = new User 
@@ -58,6 +58,7 @@ namespace BackendAPI.Data
                     Email = "rahul@erp.com", 
                     PasswordHash = "sales123", 
                     RoleId = salesRole.RoleId,
+                    CreatedAt = DateTime.Now
                 };
 
                 var prodUser = new User 
@@ -66,15 +67,15 @@ namespace BackendAPI.Data
                     Email = "vikram@erp.com", 
                     PasswordHash = "prod123", 
                     RoleId = prodRole.RoleId,
+                    CreatedAt = DateTime.Now
                 };
 
                 context.Users.AddRange(adminUser, salesUser, prodUser);
-                context.SaveChanges(); // SAVE HERE TO GENERATE USER IDs
+                context.SaveChanges(); 
                 Console.WriteLine("   > Users Created");
             }
 
-            // --- GET USER IDs FOR AUDIT FIELDS ---
-            // We need these IDs for 'CreatedByUserId' and 'UpdatedByUserId' columns
+            // --- GET USER IDs ---
             var sysAdminId = context.Users.First(u => u.Username == "SystemAdmin").UserId;
             var salesUserId = context.Users.First(u => u.Username == "Rahul_Sales").UserId;
             var prodUserId = context.Users.First(u => u.Username == "Vikram_Factory").UserId;
@@ -85,25 +86,39 @@ namespace BackendAPI.Data
             // ==========================================
             if (!context.RawMaterials.Any())
             {
-                var wood = new RawMaterial { Name = "Teak Wood", SKU = "RM-WOOD-01" };
-                var glue = new RawMaterial { Name = "Super Glue", SKU = "RM-GLUE-01" };
+                // FIX: Added CreatedByUserId
+                var wood = new RawMaterial 
+                { 
+                    Name = "Teak Wood", 
+                    SKU = "RM-WOOD-01", 
+                    CreatedByUserId = sysAdminId // <--- ADDED THIS (Required)
+                };
+                
+                var glue = new RawMaterial 
+                { 
+                    Name = "Super Glue", 
+                    SKU = "RM-GLUE-01", 
+                    CreatedByUserId = sysAdminId // <--- ADDED THIS (Required)
+                };
 
                 context.RawMaterials.AddRange(wood, glue);
-                context.SaveChanges(); // Save to get RawMaterial IDs
+                context.SaveChanges(); 
 
-                // Inventory creation with UpdatedByUserId
+                // Inventory creation
                 context.RawMaterialInventories.AddRange(
                     new RawMaterialInventory 
                     { 
                         RawMaterialId = wood.RawMaterialId, 
                         AvailableQuantity = 100,
-                        UpdatedByUserId = prodUserId // Diagram field
+                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        UpdatedByUserId = prodUserId 
                     },
                     new RawMaterialInventory 
                     { 
                         RawMaterialId = glue.RawMaterialId, 
                         AvailableQuantity = 50,
-                        UpdatedByUserId = prodUserId // Diagram field
+                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        UpdatedByUserId = prodUserId 
                     }
                 );
                 Console.WriteLine("   > Raw Materials & Inventory Created");
@@ -117,19 +132,20 @@ namespace BackendAPI.Data
                 var chair = new Product 
                 { 
                     Name = "FG-CHAIR-001",
-                    CreatedByUserId = sysAdminId // Diagram field
+                    CreatedByUserId = sysAdminId 
                 };
                 
                 context.Products.Add(chair);
-                context.SaveChanges(); // Save to get ProductId
+                context.SaveChanges(); 
 
-                // FG Inventory with UpdatedByUserId
+                // FG Inventory
                 context.FinishedGoodsInventories.Add(
                     new FinishedGoodsInventory 
                     { 
                         ProductId = chair.ProductId, 
                         AvailableQuantity = 0,
-                        UpdatedByUserId = prodUserId // Diagram field
+                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        UpdatedByUserId = prodUserId 
                     }
                 );
                 
@@ -137,21 +153,20 @@ namespace BackendAPI.Data
                 var woodId = context.RawMaterials.First(r => r.SKU == "RM-WOOD-01").RawMaterialId;
                 var glueId = context.RawMaterials.First(r => r.SKU == "RM-GLUE-01").RawMaterialId;
 
-                // Check AppDbContext for property name (BOM or BOMs)
-                context.BOM.AddRange(
+                context.BOMs.AddRange(
                     new Bom 
                     { 
                         ProductId = chair.ProductId, 
                         RawMaterialId = woodId, 
                         QuantityRequired = 2, 
-                        CreatedByUserId = sysAdminId // Diagram field
+                        CreatedByUserId = sysAdminId 
                     },
                     new Bom 
                     { 
                         ProductId = chair.ProductId, 
                         RawMaterialId = glueId, 
                         QuantityRequired = 1, 
-                        CreatedByUserId = sysAdminId // Diagram field
+                        CreatedByUserId = sysAdminId 
                     }
                 );
                 context.SaveChanges();
@@ -172,7 +187,7 @@ namespace BackendAPI.Data
                     Status = "Pending",
                     ProductId = chairId,
                     Quantity = 10,
-                    CreatedByUserId = salesUserId // Diagram field
+                    CreatedByUserId = salesUserId 
                 };
 
                 context.SalesOrders.Add(order1);
