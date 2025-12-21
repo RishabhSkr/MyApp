@@ -9,17 +9,19 @@ using BackendAPI.Services;
 using BackendAPI.Services.Product;
 using BackendAPI.Services.Production;
 using BackendAPI.Services.Bom;
+using BackendAPI.Services.RawMaterial;
 
 // Repositories
 using BackendAPI.Repositories.ProductRepository;
 using BackendAPI.Repositories.BomRepository;
 using BackendAPI.Repositories.ProductionRepository;
+using BackendAPI.Repositories.RawMaterial;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+
 
 // Add SQL Server Connection
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -31,11 +33,13 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductionRepository,ProductionRepository>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
+builder.Services.AddScoped<IRawMaterialRepository, RawMaterialRepository>();
 
 // Services
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
 
 
 builder.Services.AddControllers();
@@ -96,7 +100,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
     
-    // Yeh line Database seed karegi
+    
     DbInitializer.Initialize(context);
 }
 

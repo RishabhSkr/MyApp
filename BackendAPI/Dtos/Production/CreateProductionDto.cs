@@ -6,5 +6,9 @@ namespace BackendAPI.Dtos.Production
     {
         [Required]
         public int SalesOrderId { get; set; }
+        [Required]
+        public DateTime StartDate { get; set; }
+        [Required]
+        public DateTime EndDate { get; set; }
     }
 }

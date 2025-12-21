@@ -3,7 +3,6 @@ using BackendAPI.Repositories.ProductRepository;
 using BackendAPI.Dtos.Product;
 using AutoMapper;
 using BackendAPI.Exceptions;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 
 namespace BackendAPI.Services.Product;

@@ -25,7 +25,7 @@ namespace BackendAPI.Services.Production
                                            .FirstOrDefaultAsync(s => s.SalesOrderId == dto.SalesOrderId);
 
             if (salesOrder == null) return "Error: Sales Order not found.";
-
+            if(dto.EndDate<dto.StartDate) return "Error: End Date cannot be before Start Date."; 
             // 2. Validate: Kya iska Production pehle hi ban chuka hai?
             if (await _repo.ExistsBySalesOrderIdAsync(dto.SalesOrderId))
                 return "Error: Production Order already exists for this Sales Order.";
@@ -36,7 +36,7 @@ namespace BackendAPI.Services.Production
                                         .ThenInclude(rm => rm.Inventory) // <-- Inventory tak pahunche
                                         .Where(b => b.ProductId == salesOrder.ProductId && b.IsActive)
                                         .ToListAsync();
-
+            Console.WriteLine(bomList);
             if (!bomList.Any())
                 return $"Error: No BOM (Recipe) found for product '{salesOrder.Product?.Name}'. Cannot manufacture.";
 
@@ -62,15 +62,16 @@ namespace BackendAPI.Services.Production
                 ProductId = salesOrder.ProductId,
                 PlannedQuantity = salesOrder.Quantity,
                 ProducedQuantity = 0,
-                Status = "Planned", // Abhi sirf Plan bana hai, material kata nahi hai
+                Status = "Planned", // Abhi sirf Plan bana hai
                 CreatedByUserId = userId,
-                StartDate = null
+                StartDate = dto.StartDate,
+                CompletedDate = dto.EndDate // TODO:later update karenge
             };
 
             await _repo.AddAsync(prodOrder);
 
             // Optional: Sales Order status update kar sakte hain
-            salesOrder.Status = "In Production";
+            salesOrder.Status = "Production";
             await _context.SaveChangesAsync();
 
             return "Success";

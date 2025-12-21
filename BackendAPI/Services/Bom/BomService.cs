@@ -1,8 +1,7 @@
 using BackendAPI.Data;
 using BackendAPI.Dtos.Bom;
-using BackendAPI.Models;
 using BackendAPI.Repositories.BomRepository;
-using Microsoft.EntityFrameworkCore;
+
 // Alias
 using BomEntity = BackendAPI.Models.Bom; 
 
