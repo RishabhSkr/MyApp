@@ -11,7 +11,7 @@ namespace BackendAPI.Data
             // 1. DB Check
             context.Database.EnsureCreated();
 
-            // 2. Data Check
+            // 2. Data Check (Agar data hai to skip karo)
             if (context.Users.Any() && context.SalesOrders.Any())
             {
                 Console.WriteLine("✅ Database already has data. Seeding Skipped.");
@@ -45,29 +45,20 @@ namespace BackendAPI.Data
 
                 var adminUser = new User 
                 { 
-                    Username = "SystemAdmin", 
-                    Email = "admin@erp.com", 
-                    PasswordHash = "admin123", 
-                    RoleId = adminRole.RoleId,
-                    CreatedAt = DateTime.Now // User Auditable nahi hai, manually date daal rahe hain
+                    Username = "SystemAdmin", Email = "admin@erp.com", 
+                    PasswordHash = "admin123", RoleId = adminRole.RoleId, CreatedAt = DateTime.Now 
                 };
 
                 var salesUser = new User 
                 { 
-                    Username = "Rahul_Sales", 
-                    Email = "rahul@erp.com", 
-                    PasswordHash = "sales123", 
-                    RoleId = salesRole.RoleId,
-                    CreatedAt = DateTime.Now
+                    Username = "Rahul_Sales", Email = "rahul@erp.com", 
+                    PasswordHash = "sales123", RoleId = salesRole.RoleId, CreatedAt = DateTime.Now 
                 };
 
                 var prodUser = new User 
                 { 
-                    Username = "Vikram_Factory", 
-                    Email = "vikram@erp.com", 
-                    PasswordHash = "prod123", 
-                    RoleId = prodRole.RoleId,
-                    CreatedAt = DateTime.Now
+                    Username = "Vikram_Factory", Email = "vikram@erp.com", 
+                    PasswordHash = "prod123", RoleId = prodRole.RoleId, CreatedAt = DateTime.Now 
                 };
 
                 context.Users.AddRange(adminUser, salesUser, prodUser);
@@ -86,19 +77,20 @@ namespace BackendAPI.Data
             // ==========================================
             if (!context.RawMaterials.Any())
             {
-                // FIX: Added CreatedByUserId
                 var wood = new RawMaterial 
                 { 
                     Name = "Teak Wood", 
                     SKU = "RM-WOOD-01", 
-                    CreatedByUserId = sysAdminId // <--- ADDED THIS (Required)
+                    UOM = "Pcs", 
+                    CreatedByUserId = sysAdminId 
                 };
                 
                 var glue = new RawMaterial 
                 { 
                     Name = "Super Glue", 
                     SKU = "RM-GLUE-01", 
-                    CreatedByUserId = sysAdminId // <--- ADDED THIS (Required)
+                    UOM = "Kg",
+                    CreatedByUserId = sysAdminId 
                 };
 
                 context.RawMaterials.AddRange(wood, glue);
@@ -109,15 +101,15 @@ namespace BackendAPI.Data
                     new RawMaterialInventory 
                     { 
                         RawMaterialId = wood.RawMaterialId, 
-                        AvailableQuantity = 100,
-                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        AvailableQuantity = 100, // 100 Pcs Available
+                        CreatedByUserId = prodUserId,
                         UpdatedByUserId = prodUserId 
                     },
                     new RawMaterialInventory 
                     { 
                         RawMaterialId = glue.RawMaterialId, 
-                        AvailableQuantity = 50,
-                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        AvailableQuantity = 50, // 50 Kg Available
+                        CreatedByUserId = prodUserId,
                         UpdatedByUserId = prodUserId 
                     }
                 );
@@ -132,19 +124,32 @@ namespace BackendAPI.Data
                 var chair = new Product 
                 { 
                     Name = "FG-CHAIR-001",
+                    MaxDailyCapacity = 5, 
+                    CreatedByUserId = sysAdminId 
+                };
+                var Table = new Product 
+                { 
+                    Name = "FG-Table-001",
+                    MaxDailyCapacity = 10,
+                    CreatedByUserId = sysAdminId 
+                };
+                var Cell = new Product 
+                { 
+                    Name = "FG-Lithium-Cell-001",
+                    MaxDailyCapacity = 1000,
                     CreatedByUserId = sysAdminId 
                 };
                 
-                context.Products.Add(chair);
+                context.Products.AddRange(chair,Table,Cell);
                 context.SaveChanges(); 
 
-                // FG Inventory
+                // FG Inventory (Initially 0)
                 context.FinishedGoodsInventories.Add(
                     new FinishedGoodsInventory 
                     { 
                         ProductId = chair.ProductId, 
                         AvailableQuantity = 0,
-                        CreatedByUserId = prodUserId, // <--- ADDED THIS (Required)
+                        CreatedByUserId = prodUserId,
                         UpdatedByUserId = prodUserId 
                     }
                 );
@@ -156,16 +161,14 @@ namespace BackendAPI.Data
                 context.BOMs.AddRange(
                     new Bom 
                     { 
-                        ProductId = chair.ProductId, 
-                        RawMaterialId = woodId, 
-                        QuantityRequired = 2, 
+                        ProductId = chair.ProductId, RawMaterialId = woodId, 
+                        QuantityRequired = 2, // 1 Chair needs 2 Pcs Wood
                         CreatedByUserId = sysAdminId 
                     },
                     new Bom 
                     { 
-                        ProductId = chair.ProductId, 
-                        RawMaterialId = glueId, 
-                        QuantityRequired = 1, 
+                        ProductId = chair.ProductId, RawMaterialId = glueId, 
+                        QuantityRequired = 1, // 1 Chair needs 1 Kg Glue
                         CreatedByUserId = sysAdminId 
                     }
                 );
@@ -186,11 +189,20 @@ namespace BackendAPI.Data
                     OrderDate = DateTime.Now,
                     Status = "Pending",
                     ProductId = chairId,
-                    Quantity = 10,
+                    Quantity = 10, // Total Order 10 (Capacity 5 hai, to 2 batches lagenge)
+                    CreatedByUserId = salesUserId 
+                };
+                var order2 = new SalesOrder
+                {
+                    CustomerName = "Hyundai",
+                    OrderDate = DateTime.Now,
+                    Status = "Pending",
+                    ProductId = chairId,
+                    Quantity = 20, // Total Order 10 (Capacity 5 hai, to 2 batches lagenge)
                     CreatedByUserId = salesUserId 
                 };
 
-                context.SalesOrders.Add(order1);
+                context.SalesOrders.AddRange(order1,order2);
                 context.SaveChanges();
                 Console.WriteLine("   > Sales Order Created");
             }

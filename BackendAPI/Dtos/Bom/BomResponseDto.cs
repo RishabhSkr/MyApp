@@ -16,6 +16,6 @@ namespace BackendAPI.Dtos.Bom
         public string RawMaterialName { get; set; } = string.Empty;
          public string SKU { get; set; } = string.Empty;
         public decimal QuantityRequired { get; set; }
-        public string Unit { get; set; } = "Unit";
+        public string? UOM { get; set; }
     }
 }

@@ -22,8 +22,9 @@ public class ProductionOrder : AuditableEntity
     // State -> Planned - Inprogress- Completed
     public string Status { get; set; }="Planned";
 
-    public DateTime? StartDate { get; set; } 
-    public DateTime? CompletedDate { get; set; }
+    
+    public DateTime? PlannedStartDate { get; set; } 
+    public DateTime? PlannedEndDate { get; set; }
 
     // acutal start - end date
     public DateTime? ActualStartDate { get; set; }

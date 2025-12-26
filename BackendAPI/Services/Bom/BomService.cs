@@ -36,7 +36,7 @@ namespace BackendAPI.Services.Bom
                         RawMaterialName = b.RawMaterial?.Name ?? "Unknown",
                         SKU = b.RawMaterial?.SKU ?? "",
                         QuantityRequired = b.QuantityRequired,
-                        Unit = "Unit"
+                        UOM = b.RawMaterial?.UOM ?? ""
                     }).ToList()
                 })
                 .ToList();
@@ -60,7 +60,7 @@ namespace BackendAPI.Services.Bom
                     RawMaterialName = b.RawMaterial?.Name ?? "",
                     SKU = b.RawMaterial?.SKU ?? "",
                     QuantityRequired = b.QuantityRequired,
-                    Unit = "Unit"
+                    UOM = b.RawMaterial?.UOM ?? ""
                 }).ToList()
             };
         }

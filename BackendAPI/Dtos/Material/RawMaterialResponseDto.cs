@@ -3,7 +3,7 @@ public class RawMaterialResponseDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string SKU { get; set; } = string.Empty;
-    
+    public string UOM { get; set; } = string.Empty;
     public List<RawMaterialInventoryResponseDto> Inventories { get; set; } = new();
     // --- New Audit Fields ---
     public int CreatedByUserId { get; set; }

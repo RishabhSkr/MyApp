@@ -19,7 +19,11 @@ namespace BackendAPI.Models
         public int ProductId { get; set; }
         [ForeignKey("ProductId")]
         public virtual Product? Product { get; set; }
-
+       
+        // Project Start & End Dates
+        public DateTime? ActualProductionStartDate { get; set; } 
+        public DateTime? ActualProductionEndDate { get; set; }
+        
         // Quantity (Planned) 
         public int Quantity { get; set; } 
 

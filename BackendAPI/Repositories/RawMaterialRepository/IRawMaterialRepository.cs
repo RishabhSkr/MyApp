@@ -9,11 +9,12 @@ namespace BackendAPI.Repositories.RawMaterial
         Task<RawMaterialEntity?> GetByIdAsync(int id);
         Task<RawMaterialEntity?> GetBySkuAsync(string sku);
         Task<IEnumerable<RawMaterialEntity>> GetAllAsync();
-        
-        // Inventory ke sath fetch karne ke liye
+        Task<bool> ExistsBySkuAsync(string sku);
+        // Inventory
         Task<RawMaterialInventory?> GetInventoryByMaterialIdAsync(int rawMaterialId);
         
         Task AddAsync(RawMaterialEntity rawMaterial);
+        Task UpdateRawMaterialAsync(RawMaterialEntity rawMaterial);
         Task UpdateInventoryAsync(RawMaterialInventory inventory);
     }
 }

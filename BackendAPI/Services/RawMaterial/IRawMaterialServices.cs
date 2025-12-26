@@ -6,6 +6,7 @@ namespace BackendAPI.Services.RawMaterial
     {
         Task<IEnumerable<RawMaterialResponseDto>> GetAllAsync();
         Task<string> CreateRawMaterialAsync(RawMaterialCreateDto dto, int userId);
+        Task<string> UpdateRawMaterialAsync(int id,RawMaterialUpdateDto dto, int userId);
         Task<string> AddStockAsync(StockUpdateDto dto, int userId);
     }
 }

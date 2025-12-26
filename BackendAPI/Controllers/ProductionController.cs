@@ -15,18 +15,75 @@ namespace BackendAPI.Controllers
             _service = service;
         }
 
-        [HttpPost("plan")]
-        public async Task<IActionResult> CreatePlan([FromBody] CreateProductionDto dto)
+        // 0.GET: api/Production/orders?salesOrderId=101
+        [HttpGet("production-orders")]
+        public async Task<IActionResult> GetAllOrders([FromQuery] int? salesOrderId)
         {
-            int userId = 1; // TODO: JWT User
+            var result = await _service.GetAllProductionOrdersAsync(salesOrderId);
+            return Ok(result);
+        }
+        // 1. DASHBOARD: Pending Orders
+        [HttpGet("dashboard/pending-orders")]
+        public async Task<IActionResult> GetPending()
+        {
+            var result = await _service.GetPendingSalesOrdersAsync();
+            return Ok(result);
+        }
 
+        // 2. INFO: Planning Details (Constraints)
+        [HttpGet("planning-info/{salesOrderId}")]
+        public async Task<IActionResult> GetInfo(int salesOrderId)
+        {
+            try
+            {
+                var result = await _service.GetPlanningInfoAsync(salesOrderId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // 3. CREATE: Make a Batch
+        [HttpPost("create-plan")]
+        public async Task<IActionResult> Plan([FromBody] CreateProductionDto dto) 
+        {
+            int userId = 1; // TODO: Replace with JWT User ID
             var result = await _service.CreateProductionPlanAsync(dto, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Production Order Planned Successfully!" });
-
-            // Agar Stock kam hai ya koi error hai, to 400 Bad Request
+                return Ok(new { message = "Production Planned Successfully!" });
+            
             return BadRequest(new { error = result });
         }
+
+        // 4. START: Worker Action
+        [HttpPut("start/{id}")]
+        public async Task<IActionResult> StartProduction(int id)
+        {
+            int userId = 1; 
+            var result = await _service.StartProductionAsync(id, userId);
+
+            if (result == "Success")
+                return Ok(new { message = "Production Started. Timer Running! ⏳" });
+
+            return BadRequest(new { error = result });
+        }
+
+        // 5. COMPLETE: Worker Action
+        [HttpPut("complete/{id}")]
+        public async Task<IActionResult> CompleteProduction(int id)
+        {
+            int userId = 1; 
+            var result = await _service.CompleteProductionAsync(id, userId);
+
+            if (result == "Success")
+                return Ok(new { message = "Production Completed. Stock Updated! ✅" });
+
+            return BadRequest(new { error = result });
+        }
+
+
     }
 }

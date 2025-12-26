@@ -1,3 +1,5 @@
+
+namespace BackendAPI.Dtos.Product;
 public class ProductResponseDto
 {
     public int Id { get; set; }
@@ -8,6 +10,7 @@ public class ProductResponseDto
     // public string? CreatedByUserName { get; set; } //TODO later (Advance Mapping)
     public DateTime CreatedAt { get; set; }
     
+    public int MaxDailyCapacity { get; set; }
     // Update info (Optional)
     public int? UpdatedByUserId { get; set; }
     public DateTime? UpdatedAt { get; set; }

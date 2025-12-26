@@ -19,22 +19,26 @@ namespace BackendAPI.Repositories.RawMaterial
             return await _context.RawMaterials
                                 .Include(r => r.Inventory) // Inventory data fetch karne ke liye
                                 .Where(r => r.IsActive)    // Sirf Active items
-                                .OrderByDescending(r => r.CreatedAt) // Latest upar
+                                // .OrderByDescending(r => r.CreatedAt) // Latest upar
                                 .ToListAsync();
         }
-        
+
         public async Task<RawMaterialEntity?> GetByIdAsync(int id)
         {
             return await _context.RawMaterials
                                  .FirstOrDefaultAsync(r => r.RawMaterialId == id && r.IsActive);
         }
 
+
         public async Task<RawMaterialEntity?> GetBySkuAsync(string sku)
         {
             return await _context.RawMaterials
                                  .FirstOrDefaultAsync(r => r.SKU == sku && r.IsActive);
         }
-
+        public async Task<bool> ExistsBySkuAsync(string sku)
+        {
+            return await _context.RawMaterials.AnyAsync(r => r.SKU == sku && r.IsActive);
+        }
         public async Task<RawMaterialInventory?> GetInventoryByMaterialIdAsync(int rawMaterialId)
         {
             return await _context.RawMaterialInventories
@@ -47,6 +51,13 @@ namespace BackendAPI.Repositories.RawMaterial
             await _context.SaveChangesAsync();
         }
 
+        public async Task UpdateRawMaterialAsync(RawMaterialEntity rawMaterial)
+        {
+            _context.RawMaterials.Update(rawMaterial);
+            await _context.SaveChangesAsync();
+
+        }  
+   
         public async Task UpdateInventoryAsync(RawMaterialInventory inventory)
         {
             _context.RawMaterialInventories.Update(inventory);

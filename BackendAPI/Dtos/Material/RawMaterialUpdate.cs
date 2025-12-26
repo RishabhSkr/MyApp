@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BackendAPI.Dtos.RawMaterial
 {
-    public class RawMaterialCreateDto
+    public class RawMaterialUpdateDto
     {
         [Required]
         public string Name { get; set; } = string.Empty;

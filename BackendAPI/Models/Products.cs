@@ -10,7 +10,7 @@ public class Product :AuditableEntity
 
     [Required]
     public string Name { get; set; } = string.Empty;
-    
+    public int MaxDailyCapacity { get; set; } = 100;
     // Navigation
     public ICollection<Bom> Boms { get; set; } = new List<Bom>();
 }

@@ -8,7 +8,8 @@ namespace BackendAPI.Dtos.RawMaterial
         public int RawMaterialId { get; set; }
 
         [Required]
-        [Range(1, 100000, ErrorMessage = "Quantity must be greater than 0")]
+        [Range(1, double.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
         public decimal Quantity { get; set; }
+
     }
 }

@@ -6,9 +6,18 @@ namespace BackendAPI.Dtos.Production
     {
         [Required]
         public int SalesOrderId { get; set; }
+
+        // Quantity to Produce
         [Required]
-        public DateTime StartDate { get; set; }
+        [Range(1, 1000000, ErrorMessage = "Quantity must be greater than 0")]
+        public decimal QuantityToProduce { get; set; }
+
+        //  Schedule (Planned)
         [Required]
-        public DateTime EndDate { get; set; }
+        public DateTime PlannedStartDate { get; set; }
+
+        // Planned (Target)
+        [Required]
+        public DateTime PlannedEndDate { get; set; }
     }
 }

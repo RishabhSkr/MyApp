@@ -6,7 +6,7 @@ namespace BackendAPI.Services.Product
     {
         Task<IEnumerable<ProductResponseDto>> GetAllAsync();
         Task<ProductResponseDto?> GetByIdAsync(int id);
-
+        
         Task<ProductResponseDto> CreateAsync(ProductCreateDto dto, int userId);
         
         Task UpdateAsync(int id, ProductUpdateDto dto, int userId);

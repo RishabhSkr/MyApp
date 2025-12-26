@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using BackendAPI.Data;
 using BackendAPI.Dtos.RawMaterial;
 using BackendAPI.Exceptions;
@@ -12,6 +13,13 @@ namespace BackendAPI.Services.RawMaterial
         private readonly IRawMaterialRepository _repo;
         private readonly AppDbContext _context; // For Transaction
 
+        
+        public RawMaterialService(IRawMaterialRepository repo, AppDbContext context)
+        {
+            _repo = repo;
+            _context = context;
+        }
+
         public async Task<IEnumerable<RawMaterialResponseDto>> GetAllAsync()
         {
             var entities = await _repo.GetAllAsync();
@@ -22,6 +30,7 @@ namespace BackendAPI.Services.RawMaterial
                 Id = e.RawMaterialId,
                 Name = e.Name,
                 SKU = e.SKU,
+                UOM = e.UOM,
                 CreatedByUserId = e.CreatedByUserId,
                 CreatedAt = e.CreatedAt,
                 UpdatedByUserId = e.UpdatedByUserId,
@@ -40,13 +49,7 @@ namespace BackendAPI.Services.RawMaterial
                     }
                     : new List<RawMaterialInventoryResponseDto>() // Agar inventory nahi bani to empty list
             }).ToList();
-        }
-        public RawMaterialService(IRawMaterialRepository repo, AppDbContext context)
-        {
-            _repo = repo;
-            _context = context;
-        }
-
+        }        
         //  CREATE NEW MATERIAL (With Empty Inventory)
         public async Task<string> CreateRawMaterialAsync(RawMaterialCreateDto dto, int userId)
         {
@@ -68,7 +71,6 @@ namespace BackendAPI.Services.RawMaterial
                 // Repo me AddAsync sirf RM save kar raha hai, 
                 // lekin hume ID chahiye Inventory ke liye.
                 // Isliye hum Context directly use karenge ya Repo ko modify karenge.
-                // Best practice: Let's use Repo but ensure SaveChanges calls are managed.
                 // Simplify: Adding directly to context here for transaction safety
                 
                 _context.RawMaterials.Add(newMaterial);
@@ -96,6 +98,31 @@ namespace BackendAPI.Services.RawMaterial
             }
         }
 
+        public async Task<string> UpdateRawMaterialAsync(int id,RawMaterialUpdateDto dto, int userId)
+        {   
+            var material = await _repo.GetByIdAsync(id);
+
+            if (material == null)
+                throw new NotFoundException("Raw Material not found.");
+
+            // duplicate check
+            var alreadyNameExists = await _repo.ExistsBySkuAsync(dto.SKU);
+            if (material.SKU != dto.SKU && alreadyNameExists)
+                throw new BadRequestException("Raw Material SKU already taken.");
+
+            // Mapping DTO -> Entity
+            material.Name = dto.Name;
+            material.SKU = dto.SKU;
+            material.UOM = dto.UOM;
+
+            // Audit
+            material.UpdatedByUserId = userId;
+
+            await _repo.UpdateRawMaterialAsync(material);
+
+            return "Success";
+        }
+        
         // ADD STOCK (Purchase)
         public async Task<string> AddStockAsync(StockUpdateDto dto, int userId)
         {
@@ -113,5 +140,38 @@ namespace BackendAPI.Services.RawMaterial
             await _repo.UpdateInventoryAsync(inventory);
             return "Success";
         }
+
+        //    public async Task<RawMaterialResponseDto> GetByIdAsync(int id)
+        // {
+        //     var entity = await _repo.GetByIdAsync(id);
+
+        //     if (entity == null)
+        //         throw new NotFoundException("Raw Material not found.");
+
+        //     // Mapping Entity -> DTO
+        //     return new RawMaterialResponseDto
+        //     {
+        //         Id = entity.RawMaterialId,
+        //         Name = entity.Name,
+        //         SKU = entity.SKU,
+        //         CreatedByUserId = entity.CreatedByUserId,
+        //         CreatedAt = entity.CreatedAt,
+        //         UpdatedByUserId = entity.UpdatedByUserId,
+        //         UpdatedAt = entity.UpdatedAt,
+
+        //         // Inventory Mapping
+        //         Inventories = entity.Inventory != null 
+        //             ? new List<RawMaterialInventoryResponseDto> 
+        //             { 
+        //                 new RawMaterialInventoryResponseDto 
+        //                 { 
+        //                     InventoryId = entity.Inventory.Id,
+        //                     AvailableQuantity = entity.Inventory.AvailableQuantity 
+        //                 } 
+        //             }
+        //             : new List<RawMaterialInventoryResponseDto>()
+        //     };
+        // }
+        
     }
 }
