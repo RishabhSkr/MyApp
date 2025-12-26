@@ -26,10 +26,22 @@ namespace BackendAPI.Repositories.ProductionRepository
 
         public async Task<decimal> GetTotalPlannedQtyBySalesOrderIdAsync(int salesOrderId)
         {
-            return await _context.ProductionOrders
-                                 .Where(p => p.SalesOrderId == salesOrderId) 
-                                 //  count (Completed + Planned + InProgress)
-                                 .SumAsync(p => p.PlannedQuantity);
+            // return await _context.ProductionOrders
+            //                      .Where(p => p.SalesOrderId == salesOrderId) 
+            //                      //  count (Completed + Planned + InProgress)
+            //                      .SumAsync(p => p.PlannedQuantity);
+
+            var orders = await _context.ProductionOrders
+                               .Where(p => p.SalesOrderId == salesOrderId)
+                               .Where(p => p.Status != "Cancelled")
+                               .ToListAsync();
+
+            //  Conditional Sum:
+            // Agar Complete hai -> To 'Produced' gino (Real)
+            // Agar Planned/InProgress hai -> To 'Planned' gino (Target)
+            return orders.Sum(p => p.Status == "Completed" ? p.ProducedQuantity : p.PlannedQuantity);
+
+            
         }
         public async Task<IEnumerable<ProdOrder>> GetAllAsync()
         {

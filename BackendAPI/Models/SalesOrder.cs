@@ -25,6 +25,7 @@ namespace BackendAPI.Models
         public DateTime? ActualProductionEndDate { get; set; }
         
         // Quantity (Planned) 
+        
         public int Quantity { get; set; } 
 
     }

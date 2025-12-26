@@ -143,6 +143,7 @@ namespace BackendAPI.Data
             modelBuilder.Entity<FinishedGoodsInventory>().Property(b => b.AvailableQuantity).HasPrecision(18, 2);
             modelBuilder.Entity<ProductionOrder>().Property(b => b.PlannedQuantity).HasPrecision(18, 2);
             modelBuilder.Entity<ProductionOrder>().Property(b => b.ProducedQuantity).HasPrecision(18, 2);
+            modelBuilder.Entity<ProductionOrder>().Property(b => b.ScrapQuantity).HasPrecision(18, 2);
         }
 
         //  Helper to avoid writing the same code multiple times

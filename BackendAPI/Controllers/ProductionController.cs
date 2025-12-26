@@ -66,20 +66,34 @@ namespace BackendAPI.Controllers
             var result = await _service.StartProductionAsync(id, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Production Started. Timer Running! ⏳" });
+                return Ok(new { message = "Production Started. Timer Running!" });
 
             return BadRequest(new { error = result });
         }
 
-        // 5. COMPLETE: Worker Action
-        [HttpPut("complete/{id}")]
-        public async Task<IActionResult> CompleteProduction(int id)
+
+         //  CANCEL ENDPOINT
+        [HttpPut("cancel/{id}")]
+        public async Task<IActionResult> CancelOrder(int id)
         {
-            int userId = 1; 
-            var result = await _service.CompleteProductionAsync(id, userId);
+            int userId = 1; // TODO: JWT
+            var result = await _service.CancelProductionOrderAsync(id, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Production Completed. Stock Updated! ✅" });
+                return Ok(new { message = "Order Cancelled. Material Restored to Inventory. ✅" });
+
+            return BadRequest(new { error = result });
+        }
+
+        //  COMPLETE ENDPOINT (Updated to use DTO)
+        [HttpPut("complete")]
+        public async Task<IActionResult> CompleteProduction([FromBody] CompleteProductionDto dto)
+        {
+            int userId = 1; 
+            var result = await _service.CompleteProductionAsync(dto, userId);
+
+            if (result == "Success")
+                return Ok(new { message = "Production Completed. Stock Updated!" });
 
             return BadRequest(new { error = result });
         }

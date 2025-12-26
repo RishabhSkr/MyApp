@@ -8,6 +8,8 @@ namespace BackendAPI.Dtos.Production
         public string ProductName { get; set; } = string.Empty;
 
         public decimal BatchQuantity { get; set; }
+        public decimal ProducedQuantity { get; set; } 
+        public decimal ScrapQuantity { get; set; }
         public string Status { get; set; } = string.Empty; // Planned, In Progress, Completed
 
         // Dates

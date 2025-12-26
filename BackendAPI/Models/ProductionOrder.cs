@@ -17,8 +17,11 @@ public class ProductionOrder : AuditableEntity
     [ForeignKey("ProductId")]
     public virtual Product? Product { get; set; }
     //  Qty
+    [Column(TypeName = "decimal(18,2)")]
     public decimal PlannedQuantity { get; set; }
+    [Column(TypeName = "decimal(18,2)")]
     public decimal ProducedQuantity { get; set; } = 0;
+    public decimal ScrapQuantity { get; set; } = 0;
     // State -> Planned - Inprogress- Completed
     public string Status { get; set; }="Planned";
 

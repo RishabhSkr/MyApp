@@ -39,6 +39,8 @@ namespace BackendAPI.Services.Production
                 SalesOrderId = p.SalesOrderId,
                 ProductName = p.Product?.Name?? "Unknown",
                 BatchQuantity = p.PlannedQuantity,
+                ProducedQuantity = p.ProducedQuantity,
+                ScrapQuantity = p.ScrapQuantity,
                 Status = p.Status,
                 PlannedDate = p.PlannedStartDate,
                 ActualStartDate = p.ActualStartDate,
@@ -70,7 +72,7 @@ namespace BackendAPI.Services.Production
                                             .Sum(p => p.ProducedQuantity);
                 // kitna pending
                 decimal pipeline = allBatches
-                                            .Where(p => p.Status != "Completed")
+                                            .Where(p => p.Status != "Completed" && p.Status != "Cancelled")
                                             .Sum(p => p.PlannedQuantity);
                 // kitna unplanned(bacha hai)
                 decimal unplanned = so.Quantity - (produced + pipeline);
@@ -84,7 +86,7 @@ namespace BackendAPI.Services.Production
                 // status logic
                 string displayStatus = "New";
                 if(pipeline > 0 && produced==0) displayStatus = "Planned";
-                else if(produced > 0) displayStatus = "InProgress";
+                else if(produced > 0) displayStatus = "In Production";
 
                 list.Add(new PendingOrderDto
                 {
@@ -228,36 +230,208 @@ namespace BackendAPI.Services.Production
         }
 
         // COMPLETE PRODUCTION (Add Finished Goods)
-        public async Task<string> CompleteProductionAsync(int productionOrderId, int userId)
+        // public async Task<string> CompleteProductionAsync(int productionOrderId, int userId)
+        // {
+        //     using var transaction = await _context.Database.BeginTransactionAsync();
+        //     try {
+        //         var prodOrder = await _context.ProductionOrders.FindAsync(productionOrderId);
+        //         if(prodOrder == null || prodOrder.Status != "In Progress") return "Invalid Order or Status";
+
+        //         // Update PO
+        //         prodOrder.Status = "Completed";
+        //         prodOrder.ActualEndDate = DateTime.Now;
+        //         prodOrder.ProducedQuantity = prodOrder.PlannedQuantity; // Standard Consumption Logic
+        //         prodOrder.UpdatedByUserId = userId;
+
+        //         // Add to Finished Goods Inventory
+        //         var fgInv = await _context.FinishedGoodsInventories.FirstOrDefaultAsync(f => f.ProductId == prodOrder.ProductId);
+        //         if(fgInv == null) {
+        //             fgInv = new FinishedGoodsInventory { ProductId = prodOrder.ProductId, AvailableQuantity = 0, CreatedByUserId = userId };
+        //             _context.FinishedGoodsInventories.Add(fgInv);
+        //         }
+        //         fgInv.AvailableQuantity += prodOrder.ProducedQuantity;
+
+        //         // Check Project Completion
+        //         var saleOrder = await _context.SalesOrders.FindAsync(prodOrder.SalesOrderId);
+        //         if(saleOrder != null) {
+        //             decimal totalDone = await _context.ProductionOrders.Where(p => p.SalesOrderId == prodOrder.SalesOrderId && p.Status == "Completed").SumAsync(p => p.ProducedQuantity);
+        //             totalDone += prodOrder.ProducedQuantity; // Current wala
+
+        //             if(totalDone >= saleOrder.Quantity) {
+        //                 saleOrder.Status = "Completed";
+        //                 saleOrder.ActualProductionEndDate = DateTime.Now;
+        //             }
+        //         }
+
+        //         await _context.SaveChangesAsync();
+        //         await transaction.CommitAsync();
+        //         return "Success";
+        //     }
+        //     catch(Exception ex) {
+        //         await transaction.RollbackAsync();
+        //         return $"Error: {ex.Message}";
+        //     }
+        // }
+
+        public async Task<string> CompleteProductionAsync(CompleteProductionDto dto, int userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
-            try {
-                var prodOrder = await _context.ProductionOrders.FindAsync(productionOrderId);
-                if(prodOrder == null || prodOrder.Status != "In Progress") return "Invalid Order or Status";
+            try
+            {
+                var po = await _context.ProductionOrders.FindAsync(dto.ProductionOrderId);
+                if (po == null) return "Order not found.";
+                if (po.Status != "In Progress") return "Error: Order must be 'In Progress' to complete.";
 
-                // Update PO
-                prodOrder.Status = "Completed";
-                prodOrder.ActualEndDate = DateTime.Now;
-                prodOrder.ProducedQuantity = prodOrder.PlannedQuantity; // Standard Consumption Logic
-                prodOrder.UpdatedByUserId = userId;
+                // Validation
+                if (dto.ActualProducedQuantity > po.PlannedQuantity)
+                    return $"Error: Cannot produce {dto.ActualProducedQuantity}. Max Plan was {po.PlannedQuantity}.";
 
-                // Add to Finished Goods Inventory
-                var fgInv = await _context.FinishedGoodsInventories.FirstOrDefaultAsync(f => f.ProductId == prodOrder.ProductId);
-                if(fgInv == null) {
-                    fgInv = new FinishedGoodsInventory { ProductId = prodOrder.ProductId, AvailableQuantity = 0, CreatedByUserId = userId };
-                    _context.FinishedGoodsInventories.Add(fgInv);
+                if (dto.ActualProducedQuantity < 0 || dto.ScrapQuantity < 0)
+                {
+                    return "Error: Quantity cannot be negative.";
                 }
-                fgInv.AvailableQuantity += prodOrder.ProducedQuantity;
 
-                // Check Project Completion
-                var saleOrder = await _context.SalesOrders.FindAsync(prodOrder.SalesOrderId);
-                if(saleOrder != null) {
-                    decimal totalDone = await _context.ProductionOrders.Where(p => p.SalesOrderId == prodOrder.SalesOrderId && p.Status == "Completed").SumAsync(p => p.ProducedQuantity);
-                    totalDone += prodOrder.ProducedQuantity; // Current wala
+                decimal totalOutput = dto.ActualProducedQuantity + dto.ScrapQuantity;
+                
+                if (totalOutput > po.PlannedQuantity)
+                {
+                    return $"Error: Total (Produced {dto.ActualProducedQuantity} + Scrap {dto.ScrapQuantity}) cannot exceed Planned Quantity {po.PlannedQuantity}.";
+                }
+                if (dto.ScrapQuantity > dto.ActualProducedQuantity)
+                {
+                    return $"Error: Abnormal Scrap Level! Scrap ({dto.ScrapQuantity}) cannot be more than Produced Quantity ({dto.ActualProducedQuantity}). Please check inputs.";
+                }
+                // Calculation
+                decimal produced = dto.ActualProducedQuantity;
+                decimal scrap = dto.ScrapQuantity;
+                decimal unused = po.PlannedQuantity - totalOutput; 
+                decimal planned = po.PlannedQuantity;
 
-                    if(totalDone >= saleOrder.Quantity) {
-                        saleOrder.Status = "Completed";
-                        saleOrder.ActualProductionEndDate = DateTime.Now;
+                // A. PARTIAL INVENTORY RESTORE (Short Close Logic)
+                if (unused > 0)
+                {
+                    var boms = await _context.BOMs
+                                            .Include(b => b.RawMaterial).ThenInclude(rm => rm!.Inventory)
+                                            .Where(b => b.ProductId == po.ProductId && b.IsActive)
+                                            .ToListAsync();
+
+                    foreach (var item in boms)
+                    {
+                        if (item.RawMaterial?.Inventory != null)
+                        {
+                            decimal restoreQty = item.QuantityRequired * unused;
+                            item.RawMaterial.Inventory.AvailableQuantity += restoreQty; // Partial Add
+                            _context.RawMaterialInventories.Update(item.RawMaterial.Inventory);
+                        }
+                    }
+                }
+
+                // B. ADD FINISHED GOODS (Real Qty) 
+                if (produced > 0)
+                {
+                    var fgInv = await _context.FinishedGoodsInventories.FirstOrDefaultAsync(f => f.ProductId == po.ProductId);
+                    if (fgInv == null)
+                    {
+                        fgInv = new FinishedGoodsInventory { ProductId = po.ProductId, AvailableQuantity = 0, CreatedByUserId = userId };
+                        _context.FinishedGoodsInventories.Add(fgInv);
+                    }
+                    fgInv.AvailableQuantity += produced;
+                    _context.FinishedGoodsInventories.Update(fgInv);
+                }
+
+                // C. UPDATE PO
+                po.Status = "Completed";
+                po.ActualEndDate = DateTime.Now;
+                po.ProducedQuantity = produced;
+                po.ScrapQuantity = scrap;
+                po.UpdatedByUserId = userId;
+
+                // D. SALES ORDER UPDATE
+                var so = await _context.SalesOrders.FindAsync(po.SalesOrderId);
+                if (so != null)
+                {
+                    // Ab Repo naya logic use karega (Completed wala Produced count karega)
+                    // Humen current batch ka 'Produced' add karna padega total me check ke liye
+                    // Note: Behtar ye hai ki hum Context save karne ke baad check karein, par transaction hai to manual count karte hain:
+                    
+                    decimal previousDone = await _context.ProductionOrders
+                        .Where(p => p.SalesOrderId == po.SalesOrderId && p.Status == "Completed" && p.ProductionOrderId != po.ProductionOrderId)
+                        .SumAsync(p => p.ProducedQuantity);
+                    
+                    decimal totalDone = previousDone + produced;
+
+                    if (totalDone >= so.Quantity)
+                    {
+                        so.Status = "Completed";
+                        so.ActualProductionEndDate = DateTime.Now;
+                    }
+                    else
+                    {
+                        so.Status = "In Production"; // Short close hua to bhi 'In Production' rahega
+                    }
+                    _context.SalesOrders.Update(so);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return "Success";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return $"Error: {ex.Message}";
+            }
+        }
+        // cancel order
+        public async Task<string> CancelProductionOrderAsync(int productionOrderId, int userId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var po = await _context.ProductionOrders.FindAsync(productionOrderId);
+                if (po == null) return "Order not found.";
+                
+                // Validation
+                if (po.Status != "Planned") 
+                    return "Error: Only 'Planned' orders can be fully Cancelled. If started, use Complete (Short Close).";
+
+                // A. FULL INVENTORY RESTORE 
+                // Pura material wapas stock me add karo
+                var boms = await _context.BOMs
+                                        .Include(b => b.RawMaterial).ThenInclude(rm => rm!.Inventory)
+                                        .Where(b => b.ProductId == po.ProductId && b.IsActive)
+                                        .ToListAsync();
+
+                foreach (var item in boms)
+                {
+                    if (item.RawMaterial?.Inventory != null)
+                    {
+                        decimal restoreQty = item.QuantityRequired * po.PlannedQuantity;
+                        item.RawMaterial.Inventory.AvailableQuantity += restoreQty; // 📈 Full Add
+                        item.RawMaterial.Inventory.UpdatedByUserId = userId;
+                        _context.RawMaterialInventories.Update(item.RawMaterial.Inventory);
+                    }
+                }
+
+                // B. UPDATE STATUS
+                po.Status = "Cancelled";
+                po.UpdatedByUserId = userId;
+                po.ActualEndDate = DateTime.Now; // Cancel time
+
+                // C. RESET SALES ORDER (Agar aur koi active PO nahi bacha)
+                bool hasActivePOs = await _context.ProductionOrders
+                    .AnyAsync(p => p.SalesOrderId == po.SalesOrderId 
+                                && p.ProductionOrderId != po.ProductionOrderId 
+                                && p.Status != "Cancelled");
+
+                if (!hasActivePOs)
+                {
+                    var so = await _context.SalesOrders.FindAsync(po.SalesOrderId);
+                    if (so != null && so.Status != "Completed")
+                    {
+                        so.Status = "Pending"; // Wapas shuruat par
+                        so.ActualProductionStartDate = null;
+                        _context.SalesOrders.Update(so);
                     }
                 }
 
@@ -265,7 +439,8 @@ namespace BackendAPI.Services.Production
                 await transaction.CommitAsync();
                 return "Success";
             }
-            catch(Exception ex) {
+            catch (Exception ex)
+            {
                 await transaction.RollbackAsync();
                 return $"Error: {ex.Message}";
             }

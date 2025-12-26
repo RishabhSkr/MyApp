@@ -14,5 +14,6 @@ namespace BackendAPI.Repositories.ProductionRepository
         Task<IEnumerable<PendingOrderDto>>GetPendingSalesOrdersAsync();
         // Validation ke liye: Kya is SalesOrder par pehle se Production chal rahi hai?
         Task<bool> ExistsBySalesOrderIdAsync(int salesOrderId);
+       
     }
 }
