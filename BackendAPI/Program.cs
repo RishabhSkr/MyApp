@@ -10,18 +10,19 @@ using BackendAPI.Services.Product;
 using BackendAPI.Services.Production;
 using BackendAPI.Services.Bom;
 using BackendAPI.Services.RawMaterial;
+using BackendAPI.Services.FinishedGoods;
 
 // Repositories
 using BackendAPI.Repositories.ProductRepository;
 using BackendAPI.Repositories.BomRepository;
-using BackendAPI.Repositories.ProductionRepository;
 using BackendAPI.Repositories.RawMaterial;
-
+using BackendAPI.Repositories.ProductionRepository;
+using BackendAPI.Repositories.FinishedGoodsRepository;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// Finished Goods Inventory
 
 // Add SQL Server Connection
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -30,12 +31,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // jwt
 builder.Services.AddScoped<JwtService>();
 //  DI
+builder.Services.AddScoped<IFinishedGoodsRepository,FinishedGoodsRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductionRepository,ProductionRepository>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
 builder.Services.AddScoped<IRawMaterialRepository, RawMaterialRepository>();
 
 // Services
+builder.Services.AddScoped<IFinishedGoodsService,FinishedGoodsService>();
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -45,6 +48,22 @@ builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// CORS Policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") 
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
+builder.Services.AddControllers();
+
+
 
 // Automapper
 builder.Services.AddAutoMapper(typeof(ProductProfile));
@@ -86,7 +105,8 @@ app.MapGet("/", async context =>
 });
 
 
-
+// before auth
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 
 
