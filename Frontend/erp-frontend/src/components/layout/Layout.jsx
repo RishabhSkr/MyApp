@@ -1,7 +1,6 @@
 import React from 'react';
 import Sidebar from './Sidebar';
-import { Toaster } from 'react-hot-toast'; // For notifications
-
+import { Toaster } from 'react-hot-toast'; 
 const Layout = ({ children }) => {
     return (
         <div className="flex min-h-screen bg-gray-50">

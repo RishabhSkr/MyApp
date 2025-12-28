@@ -30,6 +30,10 @@ namespace BackendAPI.Services.Bom
                 {
                     ProductId = g.Key,
                     ProductName = g.First().Product?.Name ?? "Unknown",
+                    CreatedAt = g.First().CreatedAt,
+                    UpdatedAt = g.First().UpdatedAt,
+                    CreatedByUserId = g.First().CreatedByUserId,
+                    UpdatedByUserId = g.First().UpdatedByUserId,
                     Materials = g.Select(b => new BomItemDto
                     {
                         RawMaterialId = b.RawMaterialId,
@@ -37,6 +41,7 @@ namespace BackendAPI.Services.Bom
                         SKU = b.RawMaterial?.SKU ?? "",
                         QuantityRequired = b.QuantityRequired,
                         UOM = b.RawMaterial?.UOM ?? ""
+
                     }).ToList()
                 })
                 .ToList();
@@ -54,6 +59,10 @@ namespace BackendAPI.Services.Bom
             {
                 ProductId = productId,
                 ProductName = boms.First().Product?.Name ?? "Unknown",
+                CreatedAt = boms.First().CreatedAt,
+                UpdatedAt = boms.First().UpdatedAt,
+                CreatedByUserId = boms.First().CreatedByUserId,
+                UpdatedByUserId = boms.First().UpdatedByUserId,
                 Materials = boms.Select(b => new BomItemDto
                 {
                     RawMaterialId = b.RawMaterialId,
@@ -81,7 +90,7 @@ namespace BackendAPI.Services.Bom
                     ProductId = dto.ProductId,
                     RawMaterialId = item.RawMaterialId,
                     QuantityRequired = item.QuantityRequired,
-                    CreatedByUserId = userId // <--- User ID set kiya
+                    CreatedByUserId = userId 
                 });
             }
 

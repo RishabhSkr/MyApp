@@ -1,39 +1,160 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Factory, Box, Layers } from 'lucide-react';
+import { 
+    LayoutDashboard, Factory, Box, Layers, ChevronDown, 
+    ChevronRight, PlayCircle, Clock, ChefHat, ShoppingCart, 
+    ListOrdered
+} from 'lucide-react';
 
 const Sidebar = () => {
     const location = useLocation();
+    const [openMenus, setOpenMenus] = useState({});
 
-    const menuItems = [
-        { path: '/', name: 'Dashboard', icon: LayoutDashboard },
-        { path: '/production', name: 'Production Floor', icon: Factory },
-        { path: '/inventory', name: 'Inventory', icon: Box },
-        { path: '/masters', name: 'Master Data Management', icon: Layers },
+    // Toggle logic for any level of menu
+    const toggleMenu = (name, e) => {
+        e.preventDefault(); // Prevent navigation if it has a path
+        e.stopPropagation();
+        setOpenMenus(prev => ({ ...prev, [name]: !prev[name] }));
+    };
+     const menuItems = [
+        { type: 'header', label: 'SALES & CRM' },
+        { 
+            path: '/sales/orders', 
+            name: 'Sales Orders', 
+            icon: ShoppingCart, 
+            type: 'link' 
+        },
+        
+        { type: 'header', label: 'PRODUCTION MODULE' },
+        {
+            name : 'Production Module',
+            icon: Factory,
+            type: 'sub',
+            subItems: [
+                { 
+                    path: '/', 
+                    name: 'Production Dashboard', 
+                    icon: LayoutDashboard,
+                    type: 'link' 
+                },
+                { 
+                    name: 'Production Management', 
+                    icon: Factory,
+                    type : 'sub', 
+                    subItems: [
+                        { path: '/production-plan', name: 'Order Management', icon: ChefHat },
+                        { path: '/production-orders', name: 'All Orders', icon: ListOrdered },
+                        // { path: '/production-create-order', name: 'Create Order', icon: ChefHat },
+                        // { path: '/production-start-order', name: 'Start Order', icon: PlayCircle },
+                        // { path: '/production-complete-order', name: 'Complete Order', icon: PlayCircle },
+                    ]
+                },
+                {   
+                    name: 'Inventory', 
+                    icon: Box,
+                    type: 'sub',
+                    subItems:[
+                        { path: '/inventory/raw-material', name: 'Raw Material Stock', icon: Box },
+                        { path: '/inventory/finished-goods', name: 'Finished Goods', icon: Box },
+                    ]
+                },
+                { 
+                    name: 'Data Management', 
+                    icon: Layers,
+                    type: 'sub', 
+                    subItems: [
+                        { path: '/masters/raw-materials', name: 'Raw Materials' },
+                        { path: '/masters/products', name: 'Products (FG)' },
+                        { path: '/masters/bom', name: 'Bill of Materials (BOM)' }
+                    ]
+                }
+            ]
+        },
     ];
 
+    // Recursive Function to handle Infinite Nesting(Advanced Menu)
+    const renderMenuItem = (item, index, depth = 0) => {
+        const Icon = item.icon;
+        
+        // 1. Header Case
+        if (item.type === 'header') {
+            return (
+                <div key={index} className="px-4 pt-6 pb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    {item.label}
+                </div>
+            );
+        }
+
+        // 2. Dropdown (Sub-menu) Case
+        if (item.type === 'sub') {
+            const isMenuOpen = openMenus[item.name];
+            
+            // Check if any child inside this tree is active (for highlighting parent)
+            const isChildActive = (items) => {
+                return items.some(sub => 
+                    sub.path === location.pathname || (sub.subItems && isChildActive(sub.subItems))
+                );
+            };
+            const isActive = isChildActive(item.subItems);
+
+            // Dynamic Padding for nesting indentation
+            const paddingLeft = depth === 0 ? '1rem' : `${depth * 1.5 + 1}rem`;
+
+            return (
+                <div key={index}>
+                    <button
+                        onClick={(e) => toggleMenu(item.name, e)}
+                        style={{ paddingLeft }}
+                        className={`w-full flex items-center justify-between py-3 pr-4 hover:bg-slate-800 transition-colors ${
+                            isActive ? 'text-blue-400' : 'text-slate-300'
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            {Icon && <Icon size={18} />} 
+                            <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                        {isMenuOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </button>
+
+                    {/* Render Children Recursively if Open */}
+                    {isMenuOpen && (
+                        <div className="bg-slate-950 border-l border-slate-800 ml-4">
+                            {item.subItems.map((subItem, subIndex) => 
+                                renderMenuItem(subItem, subIndex, depth + 1)
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // 3. Standard Link Case
+        const isActive = location.pathname === item.path;
+        const paddingLeft = depth === 0 ? '1rem' : `${depth * 1.5 + 1}rem`;
+
+        return (
+            <Link
+                key={index}
+                to={item.path}
+                style={{ paddingLeft }}
+                className={`flex items-center gap-3 py-3 pr-4 hover:bg-slate-800 transition-colors ${
+                    isActive ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+                {Icon && <Icon size={18} />}
+                <span className="text-sm">{item.name}</span>
+            </Link>
+        );
+    };
+
     return (
-        <div className="h-screen w-64 bg-slate-900 text-white fixed left-0 top-0">
-            <div className="p-4 text-2xl font-bold border-b border-slate-700">
-                ERP System
+        <div className="h-screen w-72 bg-slate-900 text-white fixed left-0 top-0 overflow-y-auto pb-10">
+            <div className="p-4 text-2xl font-bold border-b border-slate-700 flex items-center gap-2">
+                <Factory className="text-blue-500"/> ERP System
             </div>
+            
             <nav className="mt-4">
-                {menuItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.path;
-                    return (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={`flex items-center gap-3 p-4 hover:bg-slate-800 transition-colors ${
-                                isActive ? 'bg-blue-600 border-r-4 border-blue-400' : ''
-                            }`}
-                        >
-                            <Icon size={20} />
-                            <span>{item.name}</span>
-                        </Link>
-                    );
-                })}
+                {menuItems.map((item, index) => renderMenuItem(item, index))}
             </nav>
         </div>
     );

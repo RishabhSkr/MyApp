@@ -1,3 +1,5 @@
+using BackendAPI.Models;
+
 namespace BackendAPI.Dtos.Bom
 {
     public class BomResponseDto
@@ -5,6 +7,11 @@ namespace BackendAPI.Dtos.Bom
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public int CreatedByUserId { get; set; }
+        public int? UpdatedByUserId { get; set; }
+
         // List of Materials
         public List<BomItemDto> Materials { get; set; } = new();
     }
@@ -17,5 +24,6 @@ namespace BackendAPI.Dtos.Bom
          public string SKU { get; set; } = string.Empty;
         public decimal QuantityRequired { get; set; }
         public string? UOM { get; set; }
+
     }
 }
