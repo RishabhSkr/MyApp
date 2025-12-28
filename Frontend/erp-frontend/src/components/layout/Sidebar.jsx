@@ -42,9 +42,9 @@ const Sidebar = () => {
                     icon: Factory,
                     type : 'sub', 
                     subItems: [
-                        { path: '/production-plan', name: 'Order Management', icon: ChefHat },
+                        { path: '/production-create-order', name: 'Create Order', icon: ChefHat },
+                        { path: '/production-plan', name: 'Order Management', icon: Clock },
                         { path: '/production-orders', name: 'All Orders', icon: ListOrdered },
-                        // { path: '/production-create-order', name: 'Create Order', icon: ChefHat },
                         // { path: '/production-start-order', name: 'Start Order', icon: PlayCircle },
                         // { path: '/production-complete-order', name: 'Complete Order', icon: PlayCircle },
                     ]

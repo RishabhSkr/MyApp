@@ -3,13 +3,10 @@ import { useRawMaterials } from '../../hooks/useRawMaterials';
 import { Plus, Trash2 } from 'lucide-react';
 
 const RawMaterial = () => {
-    const { materials, loading, addMaterial } = useRawMaterials();
-    console.log(materials);
-    // Form state match backend DTO if possible, but UOM is mostly handled by select
+    const { materials, loading, addMaterial,deleteRM } = useRawMaterials();
+    // console.log(materials);
     const [formData, setFormData] = useState({ name: '', sku: '', uom: 'Kg' });
-    const deleteMaterial = async () => {
-       return "Delete function to be implemented";
-    }
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,7 +17,7 @@ const RawMaterial = () => {
     };
 
     const handleDelete = async (id) => {
-        const success = await deleteMaterial(id);
+        const success = await deleteRM(id);
         if (success) {
             setFormData({ name: '', sku: "", uom: 'Kg' }); 
         }
@@ -83,7 +80,7 @@ const RawMaterial = () => {
                             <th className="p-4 font-semibold text-slate-600">Name</th>
                             <th className="p-4 font-semibold text-slate-600">SKU</th>
                             <th className="p-4 font-semibold text-slate-600">Current Stock</th> {/* New Column */}
-                            <th className="p-4 font-semibold text-slate-600">Unit (UOM)</th>
+                            <th className="p-4 font-semibold text-slate-600">Unit(UOM)</th>
                             <th className="p-4 font-semibold text-slate-600">CreatedBy</th>
                             <th className="p-4 font-semibold text-slate-600">CreatedAt</th>
                             <th className="p-4 font-semibold text-slate-600">UpdatedAt</th>

@@ -65,6 +65,7 @@ namespace BackendAPI.Services.RawMaterial
                 {
                     Name = dto.Name,
                     SKU = dto.SKU,
+                    UOM = dto.UOM,
                     CreatedByUserId = userId
                 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Play } from 'lucide-react';
 import PlanningModal from '../../components/production/PlanningModal';
 import useApi from '../../hooks/useApi'; // 1. Import Hook
@@ -19,43 +19,48 @@ const Dashboard = () => {
 
     const { loading: isLoading, requestHandlerFunction } = useApi();
 
-    const loadDashboardData = async () => {
-        // Arrow function for API call
+    const loadDashboardData = useCallback(async () => {
         const response = await requestHandlerFunction(
             () => getPendingOrders()
         );
         
-        if(response.success) {
-            setOrders(response.data || []);
+        if (response.success) {
+            // Check: Axios Data -> Backend Data -> Array
+            const backendData = response.data?.data; 
+            const ordersList = Array.isArray(backendData) ? 
+                            backendData : (backendData ? [backendData] : []);
+            setOrders(ordersList);
         } else {
-            setOrders([]); 
+            setOrders([]);
         }
-    };
-    //  Initial Load
+    }, [requestHandlerFunction]);
+
+    // Initial Load
     useEffect(() => {
-        const loadDashboardData = async () => await loadDashboardData();
-        loadDashboardData();
-    }, []);
+    loadDashboardData();
+}, [loadDashboardData]);
 
 
     //  Plan Button Click (Fetch Planning Info)
-    const handlePlanClick = async (soId) => {
+   
+const handlePlanClick = async (soId) => {
         setSelectedOrderId(soId);
         setIsModalOpen(true);
-        setPlanningData(null);
+        setPlanningData(null); // Reset purana data
 
         const response = await requestHandlerFunction(
             () => getPlanningInfo(soId)
         );
 
         if(response.success) {
-            setPlanningData(response.data);
+            const actualData = response.data?.data; 
+            
+            // console.log("Sending to Modal:", actualData); 
+            setPlanningData(actualData);
         } else {
-            // Agar fail hua to modal band kar do
             setIsModalOpen(false);
         }
     };
-
     // 5. Create Batch (Submit Plan)
     const handleCreateBatch = async (quantity, startDate, endDate) => {
         const payload = {
@@ -132,8 +137,8 @@ const Dashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {orders.map(order => (
-                                <tr key={order.salesOrderId} className="hover:bg-slate-50 transition-colors">
+                            {orders.map((order,index) => (
+                                <tr key={order.salesOrderId || index} className="hover:bg-slate-50 transition-colors">
                                     <td className="p-4">
                                         <div className="font-bold text-slate-700">#{order.salesOrderId}</div>
                                         <div className="text-xs text-gray-400">

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getRawMaterials, 
         createRawMaterial,
-        updateRawMaterial, 
+        updateRawMaterial,
+        deleteRawMaterial, 
         addStock } from '../api/master/rawMaterial';
 
 import useApi from './useApi';
@@ -38,6 +39,13 @@ export const useRawMaterials = () => {
         if (result.success)fetchMaterials(); 
         return result.success
     };
+
+    // delete RM
+     const deleteRM = async (id) => {
+        const result = await requestHandlerFunction(() => deleteRawMaterial(id),"Material Deleted Successfully!");
+        if (result.success)fetchMaterials(); 
+        return result.success
+     }
     // Initial Load
     useEffect(()  =>  {
         const loadInitialData = async () => {
@@ -46,5 +54,5 @@ export const useRawMaterials = () => {
         loadInitialData();
     }, [fetchMaterials]);
 
-    return { materials, loading, addMaterial, addRawMaterialStock, updateRM };
+    return { materials, loading, addMaterial, addRawMaterialStock, updateRM,deleteRM};
 };

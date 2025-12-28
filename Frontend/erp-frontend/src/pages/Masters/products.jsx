@@ -3,6 +3,7 @@ import { getProducts,
         createProduct, 
         deleteProduct } from '../../api/master/product';
 import { Trash2, Plus, Package, Calendar, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Products = () => {
     const [products, setProducts] = useState([]);
@@ -37,7 +38,7 @@ const Products = () => {
                 name: formData.name,
                 maxDailyCapacity: parseInt(formData.maxDailyCapacity)
             });
-            alert("Product Created!");
+            toast.success("Product Created!");
             setIsModalOpen(false);
             setFormData({ name: '', maxDailyCapacity: 100 });
             loadData();

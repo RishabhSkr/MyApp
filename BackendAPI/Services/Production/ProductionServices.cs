@@ -395,8 +395,8 @@ namespace BackendAPI.Services.Production
                 if (po.Status != "Planned") 
                     return "Error: Only 'Planned' orders can be fully Cancelled. If started, use Complete (Short Close).";
 
-                // A. FULL INVENTORY RESTORE 
-                // Pura material wapas stock me add karo
+                //  INVENTORY RESTORE 
+                // add to inventory
                 var boms = await _context.BOMs
                                         .Include(b => b.RawMaterial).ThenInclude(rm => rm!.Inventory)
                                         .Where(b => b.ProductId == po.ProductId && b.IsActive)
@@ -413,12 +413,12 @@ namespace BackendAPI.Services.Production
                     }
                 }
 
-                // B. UPDATE STATUS
+                //  UPDATE STATUS
                 po.Status = "Cancelled";
                 po.UpdatedByUserId = userId;
                 po.ActualEndDate = DateTime.Now; // Cancel time
 
-                // C. RESET SALES ORDER (Agar aur koi active PO nahi bacha)
+                //  RESET SALES ORDER (Agar aur koi active PO nahi bacha)
                 bool hasActivePOs = await _context.ProductionOrders
                     .AnyAsync(p => p.SalesOrderId == po.SalesOrderId 
                                 && p.ProductionOrderId != po.ProductionOrderId 

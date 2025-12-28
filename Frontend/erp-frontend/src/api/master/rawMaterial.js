@@ -15,6 +15,12 @@ export const updateRawMaterial = async (id, data) => {
     return response.data;
 };
 
+// TODO : Delete RM need to be implemented from Backened side
+export const deleteRawMaterial = async id => {
+    const response = await api.delete(`/RawMaterial/${id}`);
+    return response.data;
+};
+
 export const addStock = async data => {
     const response = await api.post('/RawMaterial/add-stock', data);
     return response.data;

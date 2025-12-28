@@ -18,6 +18,8 @@ using BackendAPI.Repositories.BomRepository;
 using BackendAPI.Repositories.RawMaterial;
 using BackendAPI.Repositories.ProductionRepository;
 using BackendAPI.Repositories.FinishedGoodsRepository;
+using BackendAPI.Repositories.SalesRepository;
+using BackendAPI.Services.Sales;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,12 +32,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // jwt
 builder.Services.AddScoped<JwtService>();
+
 //  DI
 builder.Services.AddScoped<IFinishedGoodsRepository,FinishedGoodsRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductionRepository,ProductionRepository>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
 builder.Services.AddScoped<IRawMaterialRepository, RawMaterialRepository>();
+builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 
 // Services
 builder.Services.AddScoped<IFinishedGoodsService,FinishedGoodsService>();
@@ -43,6 +47,7 @@ builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
+builder.Services.AddScoped<ISalesService, SalesService>();
 
 
 builder.Services.AddControllers();

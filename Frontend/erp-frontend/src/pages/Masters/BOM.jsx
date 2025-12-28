@@ -113,15 +113,14 @@ const BOM = () => {
 
         const validItems = bomItems.filter(i => i.rawMaterialId && i.quantity > 0);
         if (validItems.length === 0) return alert('Add at least one material.');
-
         const payload = {
             productId: parseInt(selectedProduct),
             bomItems: validItems.map(i => ({
                 rawMaterialId: parseInt(i.rawMaterialId),
-                quantity: parseFloat(i.quantity),
+                quantityRequired: parseFloat(i.quantity),
             })),
         };
-
+        // console.log('Payload', payload);
         if (isEditMode) {
             await updateBOM(selectedProduct, payload);
         } else {

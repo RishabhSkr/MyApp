@@ -6,10 +6,10 @@ import Products from './pages/masters/products';
 import BOM from './pages/masters/BOM';
 import Production from './pages/production/AllOrders';
 import OrderManagement from './pages/production/OrderManagement';
+import CreateOrder from './pages/production/CreateOrder';
+import AddRawMaterialStock from './pages/inventory/AddRawMaterialStock';
+import FinishedGoodStock from './pages/inventory/FinishedGoodStock';
 
-// Import other pages as placeholder for now
-const RMStock = () => <div className="p-8"><h1>Raw Material Inventory</h1></div>;
-const FGStock = () => <div className="p-8"><h1>Finished Goods Inventory</h1></div>;
 
 function App() {
   return (
@@ -26,10 +26,10 @@ function App() {
           <Route path="/masters/bom" element={<BOM />} />
          
           <Route path="/production-plan" element={<OrderManagement />} />
-
+          <Route path="/production-create-order" element={<CreateOrder />} />
           {/* Inventory Routes */}
-          <Route path="/inventory/raw-material" element={<RMStock />} />
-          <Route path="/inventory/finished-goods" element={<FGStock />} />
+          <Route path="/inventory/raw-material" element={<AddRawMaterialStock />} />
+          <Route path="/inventory/finished-goods" element={<FinishedGoodStock />} />
 
           {/* Production */}
           <Route path="/production-orders" element={<Production />} />

@@ -53,20 +53,17 @@ const OrderManagement = () => {
         loadOrders();
     }, [fetchOrders]);
 
-    const applyStatusFilter = () => {
-        if (filterStatus === 'All') {
-            setFilteredOrders(orders);
-        } else {
-            setFilteredOrders(orders.filter(o => o.status === filterStatus));
-        }
-    };
-
+    
     //  Filter Logic
     useEffect(() => {
-        const applyStatus = () => {
-            applyStatusFilter();
-        }
-        applyStatus();
+        const applyStatusFilter = () => {
+            if (filterStatus === 'All') {
+                setFilteredOrders(orders);
+            } else {
+                setFilteredOrders(orders.filter(o => o.status === filterStatus));
+            }
+        };
+        applyStatusFilter();
     }, [orders, filterStatus]);
 
 
