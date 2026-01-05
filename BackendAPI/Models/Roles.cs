@@ -11,5 +11,6 @@ public class Role
     [MaxLength(50)]
     public string? RoleName { get; set; }
     // Navigation Property
-    public ICollection<User> Users { get; set; } = new List<User>(); //NullReferenceException
+    public ICollection<User> Users { get; set; } = new List<User>();
+    public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }

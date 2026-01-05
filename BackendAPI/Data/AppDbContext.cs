@@ -9,6 +9,7 @@ namespace BackendAPI.Data
 
         public DbSet<Role> Roles { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
 
         // Master Data
         public DbSet<Product> Products { get; set; }
@@ -59,6 +60,15 @@ namespace BackendAPI.Data
             .HasMany(r => r.Users)
             .WithOne(u => u.Role)
             .HasForeignKey(u => u.RoleId);
+            
+            modelBuilder.Entity<RolePermission>()
+                    .HasOne(rp => rp.Role)           
+                    .WithMany(r => r.RolePermissions) 
+                    .HasForeignKey(rp => rp.RoleId)  
+                    .OnDelete(DeleteBehavior.Cascade);
+
+           
+                
             // CONFIGURING AUDITABLE ENTITIES (UpdatedBy Relationships)
             // We use HasOne<User>() so it works even if you didn't add 
             // the Navigation Property "UpdatedByUser" in every class.

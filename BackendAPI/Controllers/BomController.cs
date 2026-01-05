@@ -1,9 +1,11 @@
 using BackendAPI.Dtos.Bom;
 using BackendAPI.Services.Bom;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BackendAPI.Controllers
 {
+    [Authorize(Policy="DynamicAccessPolicy")]
     [Route("api/[controller]")]
     [ApiController]
     public class BomController : ControllerBase

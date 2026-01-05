@@ -3,6 +3,7 @@ using BackendAPI.Dtos.Auth;
 using BackendAPI.Helpers;
 using BackendAPI.Models;
 using BackendAPI.Services;
+using BackendAPI.Services.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
