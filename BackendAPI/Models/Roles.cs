@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema; // <-- YEH MISSING HAI
+using System.ComponentModel.DataAnnotations.Schema;
 namespace BackendAPI.Models;
 
 public class Role
