@@ -330,3 +330,15 @@ C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\refint\Backen
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.pdb
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.genruntimeconfig.cache
 C:\Users\ADMIN\OneDrive\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\ref\BackendAPI.dll
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.csproj.AssemblyReference.cache
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\rpswa.dswa.cache.json
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.AssemblyInfoInputs.cache
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.AssemblyInfo.cs
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.csproj.CoreCompileInputs.cache
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.sourcelink.json
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.dll
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\refint\BackendAPI.dll
+C:\Users\ADMIN\Desktop\MyApp\BackendAPI\obj\Debug\net10.0\BackendAPI.pdb
