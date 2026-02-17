@@ -3,7 +3,6 @@ using BackendAPI.Dtos.Production;
 using BackendAPI.Repositories.ProductionRepository;
 using Microsoft.EntityFrameworkCore;
 using ProdOrder = BackendAPI.Models.ProductionOrder;
-using FinishedGoodsInventory = BackendAPI.Models.FinishedGoodsInventory;
 
 namespace BackendAPI.Services.Production
 {
