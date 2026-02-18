@@ -46,9 +46,6 @@ namespace BackendAPI.Repositories.ProductionRepository
         public async Task<IEnumerable<ProdOrder>> GetAllAsync()
         {
             return await _context.ProductionOrders
-                                 .Include(p => p.Product)
-                                 .Include(p => p.SalesOrder)
-                                 .Include(p => p.CreatedByUser)
                                  .Where(p => p.IsActive)
                                  .OrderByDescending(p => p.CreatedAt)
                                  .ToListAsync();

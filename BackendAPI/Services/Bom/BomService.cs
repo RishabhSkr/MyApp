@@ -29,7 +29,7 @@ namespace BackendAPI.Services.Bom
                 .Select(g => new BomResponseDto
                 {
                     ProductId = g.Key,
-                    ProductName = g.First().Product?.Name ?? "Unknown",
+                    ProductName = "", // TODO: Phase 8 — fetch via HTTP
                     CreatedAt = g.First().CreatedAt,
                     UpdatedAt = g.First().UpdatedAt,
                     CreatedByUserId = g.First().CreatedByUserId,
@@ -37,10 +37,10 @@ namespace BackendAPI.Services.Bom
                     Materials = g.Select(b => new BomItemDto
                     {
                         RawMaterialId = b.RawMaterialId,
-                        RawMaterialName = b.RawMaterial?.Name ?? "Unknown",
-                        SKU = b.RawMaterial?.SKU ?? "",
+                        RawMaterialName = "", // TODO: Phase 8
+                        SKU = "", // TODO: Phase 8
                         QuantityRequired = b.QuantityRequired,
-                        UOM = b.RawMaterial?.UOM ?? ""
+                        UOM = "" // TODO: Phase 8
 
                     }).ToList()
                 })
@@ -58,7 +58,7 @@ namespace BackendAPI.Services.Bom
             return new BomResponseDto
             {
                 ProductId = productId,
-                ProductName = boms.First().Product?.Name ?? "Unknown",
+                ProductName = "", // TODO: Phase 8 — fetch via HTTP
                 CreatedAt = boms.First().CreatedAt,
                 UpdatedAt = boms.First().UpdatedAt,
                 CreatedByUserId = boms.First().CreatedByUserId,
@@ -66,10 +66,10 @@ namespace BackendAPI.Services.Bom
                 Materials = boms.Select(b => new BomItemDto
                 {
                     RawMaterialId = b.RawMaterialId,
-                    RawMaterialName = b.RawMaterial?.Name ?? "",
-                    SKU = b.RawMaterial?.SKU ?? "",
+                    RawMaterialName = "", // TODO: Phase 8
+                    SKU = "", // TODO: Phase 8
                     QuantityRequired = b.QuantityRequired,
-                    UOM = b.RawMaterial?.UOM ?? ""
+                    UOM = "" // TODO: Phase 8
                 }).ToList()
             };
         }

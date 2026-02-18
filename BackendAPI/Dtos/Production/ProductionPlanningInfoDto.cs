@@ -7,7 +7,7 @@ namespace BackendAPI.Dtos.Production
         public decimal RemainingQuantity { get; set; } 
         
         // Limits
-        public int MachineDailyCapacity { get; set; }
+        public decimal MachineDailyCapacity { get; set; }
         public decimal MaxPossibleByMaterial { get; set; }
         public string LimitingMaterial { get; set; } = string.Empty;
     }   

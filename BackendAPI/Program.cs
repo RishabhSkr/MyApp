@@ -28,10 +28,10 @@ builder.Services.AddScoped<IBomRepository, BomRepository>();
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
 builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client => 
-    client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"])
+    client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"]??"")
 );
 builder.Services.AddHttpClient<ISalesServiceClient, SalesServiceClient>(client => 
-    client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"])
+    client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"]??"")
 );
 
 
