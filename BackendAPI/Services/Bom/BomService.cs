@@ -1,5 +1,6 @@
 using BackendAPI.Data;
 using BackendAPI.Dtos.Bom;
+using BackendAPI.HttpClients;
 using BackendAPI.Repositories.BomRepository;
 
 // Alias
@@ -10,66 +11,98 @@ namespace BackendAPI.Services.Bom
     public class BomService : IBomService
     {
         private readonly IBomRepository _repo;
-        private readonly AppDbContext _context; // Transaction ke liye direct access chahiye
+        private readonly AppDbContext _context;
+        private readonly IInventoryServiceClient _inventoryService;
 
-        public BomService(IBomRepository repo, AppDbContext context)
+        public BomService(IBomRepository repo, AppDbContext context, IInventoryServiceClient inventoryService)
         {
             _repo = repo;
             _context = context;
+            _inventoryService = inventoryService;
         }
+
         // GET ALL BOMS (Grouping Logic)
         public async Task<IEnumerable<BomResponseDto>> GetAllBomsAsync()
         {
             var allBoms = await _repo.GetAllAsync();
 
-            // Database "Flat List" deta hai (Row by Row).
-            // Humein usse "Product ke hisaab se Group" karna hai.
+            // Unique IDs collect karo for batch fetch
+            var productIds = allBoms.Select(b => b.ProductId).Distinct().ToList();
+            var rmIds = allBoms.Select(b => b.RawMaterialId).Distinct().ToList();
+
+            // HTTP batch fetch — ek baar me sab laao
+            var products = new Dictionary<Guid, string>();
+            foreach (var pid in productIds)
+            {
+                var p = await _inventoryService.GetProductAsync(pid);
+                if (p != null) products[pid] = p.Name;
+            }
+
+            var rawMaterials = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var rmLookup = rawMaterials.ToDictionary(r => r.Id);
+
+            // Group by Product
             var groupedResponse = allBoms
                 .GroupBy(b => b.ProductId)
                 .Select(g => new BomResponseDto
                 {
                     ProductId = g.Key,
-                    ProductName = "", // TODO: Phase 8 — fetch via HTTP
+                    ProductName = products.GetValueOrDefault(g.Key, "Unknown"),
                     CreatedAt = g.First().CreatedAt,
                     UpdatedAt = g.First().UpdatedAt,
                     CreatedByUserId = g.First().CreatedByUserId,
                     UpdatedByUserId = g.First().UpdatedByUserId,
-                    Materials = g.Select(b => new BomItemDto
+                    Materials = g.Select(b =>
                     {
-                        RawMaterialId = b.RawMaterialId,
-                        RawMaterialName = "", // TODO: Phase 8
-                        SKU = "", // TODO: Phase 8
-                        QuantityRequired = b.QuantityRequired,
-                        UOM = "" // TODO: Phase 8
-
+                        rmLookup.TryGetValue(b.RawMaterialId, out var rm);
+                        return new BomItemDto
+                        {
+                            RawMaterialId = b.RawMaterialId,
+                            RawMaterialName = rm?.Name ?? "Unknown",
+                            SKU = rm?.SKU ?? "",
+                            QuantityRequired = b.QuantityRequired,
+                            UOM = rm?.UOM ?? ""
+                        };
                     }).ToList()
                 })
                 .ToList();
 
             return groupedResponse;
         }
+
         // GET BOM BY ProductId
         public async Task<BomResponseDto?> GetBomByProductAsync(Guid productId)
         {
             var boms = await _repo.GetByProductIdAsync(productId);
             if (!boms.Any()) return null;
-            Console.WriteLine(boms);
-            // Manual Mapping to DTO
+
+            // Fetch product name via HTTP
+            var product = await _inventoryService.GetProductAsync(productId);
+
+            // Fetch raw material names via HTTP
+            var rmIds = boms.Select(b => b.RawMaterialId).Distinct().ToList();
+            var rawMaterials = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var rmLookup = rawMaterials.ToDictionary(r => r.Id);
+
             return new BomResponseDto
             {
                 ProductId = productId,
-                ProductName = "", // TODO: Phase 8 — fetch via HTTP
+                ProductName = product?.Name ?? "Unknown",
                 CreatedAt = boms.First().CreatedAt,
                 UpdatedAt = boms.First().UpdatedAt,
                 CreatedByUserId = boms.First().CreatedByUserId,
                 UpdatedByUserId = boms.First().UpdatedByUserId,
-                Materials = boms.Select(b => new BomItemDto
+                Materials = boms.Select(b =>
                 {
-                    RawMaterialId = b.RawMaterialId,
-                    RawMaterialName = "", // TODO: Phase 8
-                    SKU = "", // TODO: Phase 8
-                    QuantityRequired = b.QuantityRequired,
-                    UOM = "" // TODO: Phase 8
+                    rmLookup.TryGetValue(b.RawMaterialId, out var rm);
+                    return new BomItemDto
+                    {
+                        RawMaterialId = b.RawMaterialId,
+                        RawMaterialName = rm?.Name ?? "",
+                        SKU = rm?.SKU ?? "",
+                        QuantityRequired = b.QuantityRequired,
+                        UOM = rm?.UOM ?? ""
+                    };
                 }).ToList()
             };
         }
@@ -77,7 +110,6 @@ namespace BackendAPI.Services.Bom
         // CREATE BOM
         public async Task<string> CreateBomAsync(BomCreateDto dto, Guid userId)
         {
-            // Validation: Kya pehle se BOM hai?
             if (await _repo.ExistsAsync(dto.ProductId))
                 return "Error: BOM already exists for this product. Use Update instead.";
 
@@ -98,7 +130,7 @@ namespace BackendAPI.Services.Bom
             return "Success";
         }
 
-        // 2. UPDATE BOM (Transaction: Soft Delete Old + Insert New)
+        // UPDATE BOM (Transaction: Soft Delete Old + Insert New)
         public async Task<string> UpdateBomAsync(Guid productId, BomCreateDto dto, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -106,10 +138,8 @@ namespace BackendAPI.Services.Bom
             {
                 if (dto.ProductId != productId) return "Error: Product ID mismatch.";
 
-                // A. Purane BOM ko 'Delete' (Soft Delete) karo
                 await _repo.DeleteByProductIdAsync(productId);
 
-                // B. Naya BOM List taiyaar karo
                 var newBoms = new List<BomEntity>();
                 foreach (var item in dto.BomItems)
                 {
@@ -119,11 +149,10 @@ namespace BackendAPI.Services.Bom
                         RawMaterialId = item.RawMaterialId,
                         QuantityRequired = item.QuantityRequired,
                         CreatedByUserId = userId,
-                        UpdatedByUserId = userId // Update ke waqt dono ID same rakh sakte hain ya alag logic
+                        UpdatedByUserId = userId
                     });
                 }
 
-                // C. Save New
                 await _repo.AddRangeAsync(newBoms);
 
                 await transaction.CommitAsync();
@@ -139,7 +168,6 @@ namespace BackendAPI.Services.Bom
         public async Task<string> DeleteBomAsync(Guid productId)
         {
             try{
-                // Check karo exist karta hai ya nahi
                 if (!await _repo.ExistsAsync(productId))
                     return "Error: BOM not found.";
 

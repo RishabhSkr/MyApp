@@ -98,6 +98,31 @@ namespace BackendAPI.Controllers
             return BadRequest(new { error = result });
         }
 
+        // 5. RELEASE: Created → Released (Reserve Material)
+        [HttpPut("release/{id}")]
+        public async Task<IActionResult> ReleaseOrder(Guid id)
+        {
+            Guid userId = Guid.NewGuid(); // TODO: JWT
+            var result = await _service.ReleaseProductionOrderAsync(id, userId);
+
+            if (result == "Success")
+                return Ok(new { message = "Order Released. Material Reserved! ✅" });
+
+            return BadRequest(new { error = result });
+        }
+
+        // 6. UPDATE QTY: Only for "Created" orders
+        [HttpPut("update-qty/{id}")]
+        public async Task<IActionResult> UpdateQty(Guid id, [FromQuery] decimal newQuantity)
+        {
+            Guid userId = Guid.NewGuid(); // TODO: JWT
+            var result = await _service.UpdateProductionQtyAsync(id, newQuantity, userId);
+
+            if (result == "Success")
+                return Ok(new { message = "Quantity Updated! ✅" });
+
+            return BadRequest(new { error = result });
+        }
 
     }
 }
