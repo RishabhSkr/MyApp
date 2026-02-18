@@ -5,6 +5,7 @@ using BackendAPI.Middleware;
 // Services
 using BackendAPI.Services.Production;
 using BackendAPI.Services.Bom;
+using BackendAPI.HttpClients;
 
 // Repositories
 using BackendAPI.Repositories.BomRepository;
@@ -26,6 +27,12 @@ builder.Services.AddScoped<IBomRepository, BomRepository>();
 // Services
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
+builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client => 
+    client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"])
+);
+builder.Services.AddHttpClient<ISalesServiceClient, SalesServiceClient>(client => 
+    client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"])
+);
 
 
 builder.Services.AddControllers();

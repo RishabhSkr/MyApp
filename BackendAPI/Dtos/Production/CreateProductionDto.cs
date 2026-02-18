@@ -5,7 +5,7 @@ namespace BackendAPI.Dtos.Production
     public class CreateProductionDto
     {
         [Required]
-        public int SalesOrderId { get; set; }
+        public Guid SalesOrderId { get; set; }
 
         // Quantity to Produce
         [Required]

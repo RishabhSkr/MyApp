@@ -17,7 +17,7 @@ namespace BackendAPI.Controllers
 
         // 0.GET: api/Production/orders?salesOrderId=101
         [HttpGet("production-orders")]
-        public async Task<IActionResult> GetAllOrders([FromQuery] int? salesOrderId)
+        public async Task<IActionResult> GetAllOrders([FromQuery] Guid? salesOrderId)
         {
             var result = await _service.GetAllProductionOrdersAsync(salesOrderId);
             return Ok(result);
@@ -32,7 +32,7 @@ namespace BackendAPI.Controllers
 
         // 2. INFO: Planning Details (Constraints)
         [HttpGet("planning-info/{salesOrderId}")]
-        public async Task<IActionResult> GetInfo(int salesOrderId)
+        public async Task<IActionResult> GetInfo(Guid salesOrderId)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace BackendAPI.Controllers
         [HttpPost("create-plan")]
         public async Task<IActionResult> Plan([FromBody] CreateProductionDto dto) 
         {
-            int userId = 1; // TODO: Replace with JWT User ID
+            Guid userId = Guid.NewGuid(); // TODO: Replace with JWT User ID
             var result = await _service.CreateProductionPlanAsync(dto, userId);
 
             if (result == "Success")
@@ -60,9 +60,9 @@ namespace BackendAPI.Controllers
 
         // 4. START: Worker Action
         [HttpPut("start/{id}")]
-        public async Task<IActionResult> StartProduction(int id)
+        public async Task<IActionResult> StartProduction(Guid id)
         {
-            int userId = 1; 
+            Guid userId = Guid.NewGuid(); 
             var result = await _service.StartProductionAsync(id, userId);
 
             if (result == "Success")
@@ -74,9 +74,9 @@ namespace BackendAPI.Controllers
 
          //  CANCEL ENDPOINT
         [HttpPut("cancel/{id}")]
-        public async Task<IActionResult> CancelOrder(int id)
+        public async Task<IActionResult> CancelOrder(Guid id)
         {
-            int userId = 1; // TODO: JWT
+            Guid userId = Guid.NewGuid(); // TODO: JWT
             var result = await _service.CancelProductionOrderAsync(id, userId);
 
             if (result == "Success")
@@ -89,7 +89,7 @@ namespace BackendAPI.Controllers
         [HttpPut("complete")]
         public async Task<IActionResult> CompleteProduction([FromBody] CompleteProductionDto dto)
         {
-            int userId = 1; 
+            Guid userId = Guid.NewGuid(); 
             var result = await _service.CompleteProductionAsync(dto, userId);
 
             if (result == "Success")

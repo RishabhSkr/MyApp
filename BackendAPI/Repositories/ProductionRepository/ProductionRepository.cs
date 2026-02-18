@@ -24,7 +24,7 @@ namespace BackendAPI.Repositories.ProductionRepository
             return order;
         }
 
-        public async Task<decimal> GetTotalPlannedQtyBySalesOrderIdAsync(int salesOrderId)
+        public async Task<decimal> GetTotalPlannedQtyBySalesOrderIdAsync(Guid salesOrderId)
         {
             // return await _context.ProductionOrders
             //                      .Where(p => p.SalesOrderId == salesOrderId) 
@@ -53,7 +53,7 @@ namespace BackendAPI.Repositories.ProductionRepository
                                  .OrderByDescending(p => p.CreatedAt)
                                  .ToListAsync();
         }
-        public async Task<bool> ExistsBySalesOrderIdAsync(int salesOrderId)
+        public async Task<bool> ExistsBySalesOrderIdAsync(Guid salesOrderId)
         {
             // Check agar koi active production order is sales order se link hai
             return await _context.ProductionOrders

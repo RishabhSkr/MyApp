@@ -6,7 +6,7 @@ namespace BackendAPI.Dtos.Bom
     public class BomCreateDto
     {
         [Required]
-        public int ProductId { get; set; }
+        public Guid ProductId { get; set; }
 
         [Required]
         [MinLength(1, ErrorMessage = "At least one material is required")]
@@ -19,7 +19,7 @@ namespace BackendAPI.Dtos.Bom
     public class BomCreateItemDto
     {
         [Required]
-        public int RawMaterialId { get; set; }
+        public Guid RawMaterialId { get; set; }
 
         [Required]
         [Range(0.01, 100000)]

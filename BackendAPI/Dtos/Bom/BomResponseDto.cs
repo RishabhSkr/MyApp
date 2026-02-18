@@ -4,13 +4,13 @@ namespace BackendAPI.Dtos.Bom
 {
     public class BomResponseDto
     {
-        public int ProductId { get; set; }
+        public Guid ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        public int CreatedByUserId { get; set; }
-        public int? UpdatedByUserId { get; set; }
+        public Guid CreatedByUserId { get; set; }
+        public Guid? UpdatedByUserId { get; set; }
 
         // List of Materials
         public List<BomItemDto> Materials { get; set; } = new();
@@ -19,7 +19,7 @@ namespace BackendAPI.Dtos.Bom
     // 2. Child DTO 
     public class BomItemDto
     {
-        public int RawMaterialId { get; set; }
+        public Guid RawMaterialId { get; set; }
         public string RawMaterialName { get; set; } = string.Empty;
          public string SKU { get; set; } = string.Empty;
         public decimal QuantityRequired { get; set; }

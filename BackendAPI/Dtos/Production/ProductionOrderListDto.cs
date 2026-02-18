@@ -3,8 +3,8 @@ namespace BackendAPI.Dtos.Production
     // List of Production Orders for SO 
     public class ProductionOrderListDto
     {
-        public int ProductionOrderId { get; set; }
-        public int SalesOrderId { get; set; }
+        public Guid ProductionOrderId { get; set; }
+        public Guid SalesOrderId { get; set; }
         public string ProductName { get; set; } = string.Empty;
 
         public decimal BatchQuantity { get; set; }

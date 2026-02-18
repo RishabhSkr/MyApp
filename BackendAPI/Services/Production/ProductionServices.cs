@@ -18,7 +18,7 @@ namespace BackendAPI.Services.Production
         }
         
         // all production orders for so
-        public async Task<IEnumerable<ProductionOrderListDto>> GetAllProductionOrdersAsync(int? salesOrderId=null)
+        public async Task<IEnumerable<ProductionOrderListDto>> GetAllProductionOrdersAsync(Guid? salesOrderId=null)
         {   
             var query = _context.ProductionOrders
                         .Include(p => p.Product)
@@ -105,7 +105,7 @@ namespace BackendAPI.Services.Production
         }
 
         //  INFO API: Planning Constraints
-        public async Task<ProductionPlanningInfoDto> GetPlanningInfoAsync(int salesOrderId)
+        public async Task<ProductionPlanningInfoDto> GetPlanningInfoAsync(Guid salesOrderId)
         {
             var so = await _context.SalesOrders.Include(s => s.Product).FirstOrDefaultAsync(s => s.SalesOrderId == salesOrderId);
             if (so == null) throw new Exception("Order not found");
@@ -149,7 +149,7 @@ namespace BackendAPI.Services.Production
         }
 
         // CREATE PLAN (Reserve Material)
-        public async Task<string> CreateProductionPlanAsync(CreateProductionDto dto, int userId)
+        public async Task<string> CreateProductionPlanAsync(CreateProductionDto dto, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -158,7 +158,7 @@ namespace BackendAPI.Services.Production
                 if (so == null) return "Sales Order not found";
 
                 // Validations
-                int maxCap = so.Product?.MaxDailyCapacity ?? 100;
+                decimal maxCap = so.Product?.MaxDailyCapacity ?? 100;
                 if (dto.QuantityToProduce > maxCap) return $"Capacity Alert: Max limit is {maxCap}";
 
                 decimal planned = await _repo.GetTotalPlannedQtyBySalesOrderIdAsync(dto.SalesOrderId);
@@ -210,7 +210,7 @@ namespace BackendAPI.Services.Production
         }
 
         //  START PRODUCTION
-        public async Task<string> StartProductionAsync(int poId, int userId)
+        public async Task<string> StartProductionAsync(Guid poId, Guid userId)
         {
             var po = await _context.ProductionOrders.FindAsync(poId);
             if(po == null || po.Status != "Planned") return "Invalid Order or Status";
@@ -229,7 +229,7 @@ namespace BackendAPI.Services.Production
         }
 
         // COMPLETE PRODUCTION (Add Finished Goods)
-        // public async Task<string> CompleteProductionAsync(int productionOrderId, int userId)
+        // public async Task<string> CompleteProductionAsync(Guid productionOrderId, Guid userId)
         // {
         //     using var transaction = await _context.Database.BeginTransactionAsync();
         //     try {
@@ -272,7 +272,7 @@ namespace BackendAPI.Services.Production
         //     }
         // }
 
-        public async Task<string> CompleteProductionAsync(CompleteProductionDto dto, int userId)
+        public async Task<string> CompleteProductionAsync(CompleteProductionDto dto, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -382,7 +382,7 @@ namespace BackendAPI.Services.Production
             }
         }
         // cancel order
-        public async Task<string> CancelProductionOrderAsync(int productionOrderId, int userId)
+        public async Task<string> CancelProductionOrderAsync(Guid productionOrderId, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
