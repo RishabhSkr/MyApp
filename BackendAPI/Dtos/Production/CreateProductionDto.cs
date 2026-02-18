@@ -19,5 +19,9 @@ namespace BackendAPI.Dtos.Production
         // Planned (Target)
         [Required]
         public DateTime PlannedEndDate { get; set; }
+
+        // ForceCreate = true: User jaanta hai batch chhota hai, machine efficient nahi chalegi
+        // but phir bhi create karna hai (suggested batch ignore karke)
+        public bool ForceCreate { get; set; } = false;
     }
 }

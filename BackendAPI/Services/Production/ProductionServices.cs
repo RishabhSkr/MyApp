@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ProdOrder = BackendAPI.Models.ProductionOrder;
 using BackendAPI.HttpClients;
 using BackendAPI.HttpClients.Dtos;
+using BackendAPI.Utilities;
 
 namespace BackendAPI.Services.Production
 {
@@ -153,14 +154,27 @@ namespace BackendAPI.Services.Production
             // no material in BOM
             if (!bom.Any()) maxPossible = 0;
 
+            // Smart Batch Suggestion — Max-Min K (Binary Search)
+            decimal remaining = so.Quantity - planned;
+            decimal capacity = product?.MaxDailyCapacity ?? 0;
+            decimal available = Math.Min(remaining, maxPossible == decimal.MaxValue ? remaining : maxPossible);
+
+            var suggestion = BatchOptimizer.GetOptimalBatchPlan(available, capacity);
+
             return new ProductionPlanningInfoDto
             {
                 SalesOrderId = so.Id,
                 ProductName = product?.Name ?? "",
-                RemainingQuantity = so.Quantity - planned,
-                MachineDailyCapacity = product?.MaxDailyCapacity ?? 0,
+                RemainingQuantity = remaining,
+                MachineDailyCapacity = capacity,
                 MaxPossibleByMaterial = maxPossible,
-                LimitingMaterial = limiter
+                LimitingMaterial = limiter,
+                SuggestedBatches = suggestion.SuggestedBatches,
+                SuggestedBatchSize = suggestion.SuggestedBatchSize,
+                BatchSizes = suggestion.BatchSizes,
+                MinEfficiency = suggestion.MinEfficiency,
+                AvgEfficiency = suggestion.AvgEfficiency,
+                IsOptimal = suggestion.IsOptimal
             };
         }
 
@@ -173,13 +187,29 @@ namespace BackendAPI.Services.Production
                 var so = await _salesService.GetSalesOrderAsync(dto.SalesOrderId);
                 if (so == null) return "Sales Order not found";
 
-                 // Product info for capacity check
+                // Product info for capacity check
                 var product = await _inventoryService.GetProductAsync(so.ProductId);
-                decimal maxCap = product?.MaxDailyCapacity ?? 100;
-                if (dto.QuantityToProduce > maxCap) return $"Capacity Alert: Max limit is {maxCap}";
 
                 decimal planned = await _repo.GetTotalPlannedQtyBySalesOrderIdAsync(dto.SalesOrderId);
-                if (dto.QuantityToProduce > (so.Quantity - planned)) return  "Error: Either Order is completed or you are creating more than remaining quantity";
+                decimal totalRemaining = so.Quantity - planned;
+
+                if (dto.QuantityToProduce > totalRemaining)
+                    return "Error: Either Order is completed or you are creating more than remaining quantity";
+
+                // Efficiency check — below 50% = machine waste
+                if (!dto.ForceCreate)
+                {
+                    decimal maxCap = product?.MaxDailyCapacity ?? 0;
+                    
+                    if (maxCap > 0)
+                    {
+                        decimal efficiency = BatchOptimizer.GetEfficiency(dto.QuantityToProduce, maxCap);
+
+                        if (efficiency < BatchOptimizer.MIN_EFFICIENCY_THRESHOLD)
+                            return $"Efficiency Warning: Batch of {dto.QuantityToProduce} runs at only {efficiency}% machine efficiency. " +
+                                   $"Minimum threshold: {BatchOptimizer.MIN_EFFICIENCY_THRESHOLD}%. Use ForceCreate=true to override.";
+                    }
+                }
 
                 // Create PO (status = "Created", NO inventory reservation yet)
                 var po = new ProdOrder
@@ -210,6 +240,70 @@ namespace BackendAPI.Services.Production
             }
         }
 
+        // RELEASE: Created → Released (Reserve Material via HTTP)
+        public async Task<string> ReleaseProductionOrderAsync(Guid productionOrderId, Guid userId)
+        {
+            var po = await _context.ProductionOrders.FindAsync(productionOrderId);
+            if (po == null) return "Order not found.";
+            if (po.Status != "Created") return "Error: Only 'Created' orders can be Released.";
+
+            // BOM se material list laao
+            var boms = await _context.BOMs
+                        .Where(b => b.ProductId == po.ProductId && b.IsActive)
+                        .ToListAsync();
+
+            if (!boms.Any()) return "Error: No BOM found for this product.";
+
+            // Reserve via Inventory HTTP
+            var items = boms.Select(b => new MaterialItem
+            {
+                RawMaterialId = b.RawMaterialId,
+                Quantity = b.QuantityRequired * po.PlannedQuantity
+            }).ToList();
+
+            var reserved = await _inventoryService.ReserveMaterialsAsync(new InventoryReservationRequest
+            {
+                ProductionOrderId = po.ProductionOrderId,
+                MovementType = "RESERVE",
+                Items = items
+            });
+
+            if (!reserved) return "Error: Inventory service failed to reserve materials.";
+
+            po.Status = "Released";
+            po.UpdatedByUserId = userId;
+            await _context.SaveChangesAsync();
+            return "Success";
+        }
+        
+        // UPDATE QTY: Only for "Created" status (before release)
+        public async Task<string> UpdateProductionQtyAsync(Guid productionOrderId, decimal newQuantity, Guid userId)
+        {
+            if (newQuantity <= 0) return "Error: Quantity must be greater than 0.";
+
+            var po = await _context.ProductionOrders.FindAsync(productionOrderId);
+            if (po == null) return "Order not found.";
+            if (po.Status != "Created") return "Error: Quantity can only be updated for 'Created' orders.";
+
+            // Check remaining capacity
+            var so = await _salesService.GetSalesOrderAsync(po.SalesOrderId);
+            if (so == null) return "Error: Sales Order not found.";
+
+            decimal otherPlanned = await _context.ProductionOrders
+                .Where(p => p.SalesOrderId == po.SalesOrderId
+                        && p.ProductionOrderId != po.ProductionOrderId
+                        && p.Status != "Cancelled")
+                .SumAsync(p => p.PlannedQuantity);
+
+            decimal remaining = so.Quantity - otherPlanned;
+            if (newQuantity > remaining)
+                return $"Error: Max allowed is {remaining}. Other batches already planned.";
+
+            po.PlannedQuantity = newQuantity;
+            po.UpdatedByUserId = userId;
+            await _context.SaveChangesAsync();
+            return "Success";
+        }
         //  START PRODUCTION
         public async Task<string> StartProductionAsync(Guid poId, Guid userId)
         {
@@ -220,17 +314,14 @@ namespace BackendAPI.Services.Production
             po.ActualStartDate = DateTime.Now;
             po.UpdatedByUserId = userId;
 
-            // TODO: Update SO status via HTTP
-        //    var so = await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, "In Production");
-        //     if(so != null && so.ActualProductionStartDate == null) {
-        //         so.ActualProductionStartDate = DateTime.Now; // Project Start
-        //     }
+            // SO update via HTTP
+            await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, "In Production");
 
             await _context.SaveChangesAsync();
             return "Success";
         }
 
-
+        // COMPLETE PRODUCTION
         public async Task<string> CompleteProductionAsync(CompleteProductionDto dto, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -317,6 +408,8 @@ namespace BackendAPI.Services.Production
                 return $"Error: {ex.Message}";
             }
         }
+
+
         // cancel order
         public async Task<string> CancelProductionOrderAsync(Guid productionOrderId, Guid userId)
         {
