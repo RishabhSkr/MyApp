@@ -1,36 +1,27 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
-
+using BackendAPI.Constants;
 namespace BackendAPI.Models;
 public class ProductionOrder : AuditableEntity
 {
-    [Key]
-    public int ProductionOrderId { get; set; }
-    // Link to SalesOrder
-    [ForeignKey(nameof(SalesOrder))]
-    public int SalesOrderId { get; set; }
-    public SalesOrder SalesOrder { get; set; } = null!;
+    public Guid ProductionOrderId { get; set; } = Guid.NewGuid();
 
+    // Human-readable Order Number (PO-20260221-0001)
+    public string OrderNumber { get; set; } = string.Empty;
+
+    // Link to SalesOrder
+    public Guid SalesOrderId { get; set; }
     // Link to Product
-    public int ProductId { get; set; }
-    [ForeignKey("ProductId")]
-    public virtual Product? Product { get; set; }
+    public Guid ProductId { get; set; }
     //  Qty
-    [Column(TypeName = "decimal(18,2)")]
     public decimal PlannedQuantity { get; set; }
-    [Column(TypeName = "decimal(18,2)")]
     public decimal ProducedQuantity { get; set; } = 0;
     public decimal ScrapQuantity { get; set; } = 0;
-    // State -> Planned - Inprogress- Completed
-    public string Status { get; set; }="Planned";
-
-    
+    public decimal UnusedReturnedQuantity { get; set; } = 0;
+    // State -> Planned - Release-Inprogress- Completed-Cancelled
+    public string Status { get; set; }=EventStatus.PLANNED;
     public DateTime? PlannedStartDate { get; set; } 
     public DateTime? PlannedEndDate { get; set; }
 
     // acutal start - end date
     public DateTime? ActualStartDate { get; set; }
     public DateTime? ActualEndDate { get; set; } 
-
 }

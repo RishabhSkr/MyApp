@@ -1,11 +1,9 @@
 using BackendAPI.Dtos.Bom;
 using BackendAPI.Services.Bom;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BackendAPI.Controllers
 {
-    [Authorize(Policy="DynamicAccessPolicy")]
     [Route("api/[controller]")]
     [ApiController]
     public class BomController : ControllerBase
@@ -27,7 +25,7 @@ namespace BackendAPI.Controllers
 
         // 2. GET BY ID (Already Done - Just for Reference)
         [HttpGet("{productId}")]
-        public async Task<IActionResult> Get(int productId)
+        public async Task<IActionResult> Get(Guid productId)
         {
             var result = await _service.GetBomByProductAsync(productId);
             if (result == null) return NotFound("BOM not found.");
@@ -38,7 +36,7 @@ namespace BackendAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] BomCreateDto dto)
         {
-            int userId = 1; // TODO: JWT User
+            Guid userId = Guid.NewGuid(); // TODO: JWT User
             var result = await _service.CreateBomAsync(dto, userId);
 
             if (result == "Success") return Ok(new { message = "BOM Created" });
@@ -47,9 +45,9 @@ namespace BackendAPI.Controllers
 
         // 4. UPDATE (New)
         [HttpPut("{productId}")]
-        public async Task<IActionResult> Update(int productId, [FromBody] BomCreateDto dto)
+        public async Task<IActionResult> Update(Guid productId, [FromBody] BomCreateDto dto)
         {
-            int userId = 1; // TODO: JWT User
+            Guid userId = Guid.NewGuid(); // TODO: JWT User
             
             // Note: Update logic me hum purana hata kar naya daal rahe hain
             var result = await _service.UpdateBomAsync(productId, dto, userId);
@@ -60,7 +58,7 @@ namespace BackendAPI.Controllers
 
         // 5. DELETE (New)
         [HttpDelete("{productId}")]
-        public async Task<IActionResult> Delete(int productId)
+        public async Task<IActionResult> Delete(Guid productId)
         {
             var result = await _service.DeleteBomAsync(productId);
 

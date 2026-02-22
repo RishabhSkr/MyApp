@@ -1,6 +1,9 @@
 using BackendAPI.Data;
 using BackendAPI.Dtos.Bom;
+using BackendAPI.HttpClients;
 using BackendAPI.Repositories.BomRepository;
+using BackendAPI.Constants;
+using BackendAPI.Utilities;
 
 // Alias
 using BomEntity = BackendAPI.Models.Bom; 
@@ -10,76 +13,119 @@ namespace BackendAPI.Services.Bom
     public class BomService : IBomService
     {
         private readonly IBomRepository _repo;
-        private readonly AppDbContext _context; // Transaction ke liye direct access chahiye
+        private readonly AppDbContext _context;
+        private readonly IInventoryServiceClient _inventoryService;
 
-        public BomService(IBomRepository repo, AppDbContext context)
+        public BomService(IBomRepository repo, AppDbContext context, IInventoryServiceClient inventoryService)
         {
             _repo = repo;
             _context = context;
+            _inventoryService = inventoryService;
         }
+
         // GET ALL BOMS (Grouping Logic)
         public async Task<IEnumerable<BomResponseDto>> GetAllBomsAsync()
         {
             var allBoms = await _repo.GetAllAsync();
 
-            // Database "Flat List" deta hai (Row by Row).
-            // Humein usse "Product ke hisaab se Group" karna hai.
+            // Unique IDs collect karo for batch fetch
+            var productIds = allBoms.Select(b => b.ProductId).Distinct().ToList();
+            var rmIds = allBoms.Select(b => b.RawMaterialId).Distinct().ToList();
+
+            // HTTP batch fetch — ek baar me sab laao
+            var products = new Dictionary<Guid, string>();
+            foreach (var pid in productIds)
+            {
+                var p = await _inventoryService.GetProductAsync(pid);
+                if (p != null) products[pid] = p.Name;
+            }
+
+            var rawMaterials = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var rmLookup = rawMaterials.ToDictionary(r => r.Id);
+
+            // Group by Product
             var groupedResponse = allBoms
                 .GroupBy(b => b.ProductId)
                 .Select(g => new BomResponseDto
                 {
                     ProductId = g.Key,
-                    ProductName = g.First().Product?.Name ?? "Unknown",
+                    ProductName = products.GetValueOrDefault(g.Key, EventStatus.UNKNOWN),
+                    BomNumber = g.First().BomNumber,
+                    Version = g.First().Version,
                     CreatedAt = g.First().CreatedAt,
                     UpdatedAt = g.First().UpdatedAt,
                     CreatedByUserId = g.First().CreatedByUserId,
                     UpdatedByUserId = g.First().UpdatedByUserId,
-                    Materials = g.Select(b => new BomItemDto
+                    Materials = g.Select(b =>
                     {
-                        RawMaterialId = b.RawMaterialId,
-                        RawMaterialName = b.RawMaterial?.Name ?? "Unknown",
-                        SKU = b.RawMaterial?.SKU ?? "",
-                        QuantityRequired = b.QuantityRequired,
-                        UOM = b.RawMaterial?.UOM ?? ""
-
+                        rmLookup.TryGetValue(b.RawMaterialId, out var rm);
+                        return new BomItemDto
+                        {
+                            RawMaterialId = b.RawMaterialId,
+                            RawMaterialName = rm?.Name ?? EventStatus.UNKNOWN,
+                            SKU = rm?.SKU ?? "",
+                            QuantityRequired = b.QuantityRequired,
+                            UOM = rm?.UOM ?? ""
+                        };
                     }).ToList()
                 })
                 .ToList();
 
             return groupedResponse;
         }
+
         // GET BOM BY ProductId
-        public async Task<BomResponseDto?> GetBomByProductAsync(int productId)
+        public async Task<BomResponseDto?> GetBomByProductAsync(Guid productId)
         {
             var boms = await _repo.GetByProductIdAsync(productId);
             if (!boms.Any()) return null;
-            Console.WriteLine(boms);
-            // Manual Mapping to DTO
+
+            // Fetch product name via HTTP
+            var product = await _inventoryService.GetProductAsync(productId);
+
+            // Fetch raw material names via HTTP
+            var rmIds = boms.Select(b => b.RawMaterialId).Distinct().ToList();
+            var rawMaterials = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var rmLookup = rawMaterials.ToDictionary(r => r.Id);
+
             return new BomResponseDto
             {
                 ProductId = productId,
-                ProductName = boms.First().Product?.Name ?? "Unknown",
+                ProductName = product?.Name ?? EventStatus.UNKNOWN,
+                BomNumber = boms.First().BomNumber,
+                Version = boms.First().Version,
                 CreatedAt = boms.First().CreatedAt,
                 UpdatedAt = boms.First().UpdatedAt,
                 CreatedByUserId = boms.First().CreatedByUserId,
                 UpdatedByUserId = boms.First().UpdatedByUserId,
-                Materials = boms.Select(b => new BomItemDto
+                Materials = boms.Select(b =>
                 {
-                    RawMaterialId = b.RawMaterialId,
-                    RawMaterialName = b.RawMaterial?.Name ?? "",
-                    SKU = b.RawMaterial?.SKU ?? "",
-                    QuantityRequired = b.QuantityRequired,
-                    UOM = b.RawMaterial?.UOM ?? ""
+                    rmLookup.TryGetValue(b.RawMaterialId, out var rm);
+                    return new BomItemDto
+                    {
+                        RawMaterialId = b.RawMaterialId,
+                        RawMaterialName = rm?.Name ?? EventStatus.UNKNOWN,
+                        SKU = rm?.SKU ?? "",
+                        QuantityRequired = b.QuantityRequired,
+                        UOM = rm?.UOM ?? ""
+                    };
                 }).ToList()
             };
         }
 
         // CREATE BOM
-        public async Task<string> CreateBomAsync(BomCreateDto dto, int userId)
+        public async Task<string> CreateBomAsync(BomCreateDto dto, Guid userId)
         {
-            // Validation: Kya pehle se BOM hai?
             if (await _repo.ExistsAsync(dto.ProductId))
                 return "Error: BOM already exists for this product. Use Update instead.";
+
+            // Verify Product + Raw Materials exist in Inventory
+            var validation = await ValidateInventoryAsync(dto);
+            if (validation != null) return validation;
+
+            // Get product code for BomNumber generation
+            var product = await _inventoryService.GetProductAsync(dto.ProductId);
+            var bomNumber = await BomNumberGenerator.GenerateAsync(_context, product!.ProductCode);
 
             var bomList = new List<BomEntity>();
 
@@ -87,6 +133,8 @@ namespace BackendAPI.Services.Bom
             {
                 bomList.Add(new BomEntity
                 {
+                    BomNumber = bomNumber,
+                    Version = 1.0m,
                     ProductId = dto.ProductId,
                     RawMaterialId = item.RawMaterialId,
                     QuantityRequired = item.QuantityRequired,
@@ -95,39 +143,52 @@ namespace BackendAPI.Services.Bom
             }
 
             await _repo.AddRangeAsync(bomList);
-            return "Success";
+            return EventStatus.SUCCESS;
         }
 
-        // 2. UPDATE BOM (Transaction: Soft Delete Old + Insert New)
-        public async Task<string> UpdateBomAsync(int productId, BomCreateDto dto, int userId)
+        // UPDATE BOM (Transaction: Soft Delete Old + Insert New)
+        public async Task<string> UpdateBomAsync(Guid productId, BomCreateDto dto, Guid userId)
         {
+            // Verify Product + Raw Materials exist in Inventory
+            var validation = await ValidateInventoryAsync(dto);
+            if (validation != null) return validation;
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 if (dto.ProductId != productId) return "Error: Product ID mismatch.";
 
-                // A. Purane BOM ko 'Delete' (Soft Delete) karo
+                // Get old BomNumber + Version before deleting
+                var oldBoms = await _repo.GetByProductIdAsync(productId);
+                string bomNumber = oldBoms.First().BomNumber;
+                decimal oldVersion = oldBoms.First().Version;
+                decimal newVersion = oldVersion + 0.1m;
+
+                // Preserve original creator
+                Guid originalCreatedBy = oldBoms.First().CreatedByUserId;
+
                 await _repo.DeleteByProductIdAsync(productId);
 
-                // B. Naya BOM List taiyaar karo
                 var newBoms = new List<BomEntity>();
                 foreach (var item in dto.BomItems)
                 {
                     newBoms.Add(new BomEntity
                     {
+                        BomNumber = bomNumber,             // Same BomNumber
+                        Version = newVersion,               // Version incremented
                         ProductId = productId,
                         RawMaterialId = item.RawMaterialId,
                         QuantityRequired = item.QuantityRequired,
-                        CreatedByUserId = userId,
-                        UpdatedByUserId = userId // Update ke waqt dono ID same rakh sakte hain ya alag logic
+                        CreatedByUserId = originalCreatedBy, // Original creator preserved
+                        UpdatedByUserId = userId,            // Who updated now
+                        UpdatedAt = DateTime.UtcNow          // Last updated = NOW
                     });
                 }
 
-                // C. Save New
                 await _repo.AddRangeAsync(newBoms);
 
                 await transaction.CommitAsync();
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch (Exception ex)
             {
@@ -136,118 +197,39 @@ namespace BackendAPI.Services.Bom
             }
         }
 
-        public async Task<string> DeleteBomAsync(int productId)
+        public async Task<string> DeleteBomAsync(Guid productId)
         {
-            try
-            {
-                // Check karo exist karta hai ya nahi
+            try{
                 if (!await _repo.ExistsAsync(productId))
                     return "Error: BOM not found.";
 
                 await _repo.DeleteByProductIdAsync(productId);
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch (Exception ex)
             {
                 return $"Error: {ex.Message}";
             }
         }
+
+        // ─── SHARED VALIDATION ───
+        private async Task<string?> ValidateInventoryAsync(BomCreateDto dto)
+        {
+            //  Product exist 
+            var product = await _inventoryService.GetProductAsync(dto.ProductId);
+            if (product == null)
+                return $"Error: Product '{dto.ProductId}' not found in Inventory.";
+
+            // Sab Raw Materials exist 
+            var rmIds = dto.BomItems.Select(i => i.RawMaterialId).Distinct().ToList();
+            var foundRMs = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var foundIds = foundRMs.Select(r => r.Id).ToHashSet();
+
+            var missingIds = rmIds.Where(id => !foundIds.Contains(id)).ToList();
+            if (missingIds.Any())
+                return $"Error: Raw Materials not found in Inventory: {string.Join(", ", missingIds)}";
+
+            return null; 
+        }
     }
 }
-
-// using AutoMapper;
-// using BackendAPI.Dtos.Bom;
-// using BackendAPI.Repositories.Bom;
-// using BackendAPI.Data;
-// using BackendAPI.Exceptions;
-// using Microsoft.EntityFrameworkCore;
-
-// namespace BackendAPI.Services.Bom
-// {
-//     public class BomService : IBomService
-//     {
-//         private readonly IBomRepository _repo;
-//         private readonly IMapper _mapper;
-//         private readonly AppDbContext _context; // Transaction ke liye
-
-//         public BomService(IBomRepository repo, IMapper mapper, AppDbContext context)
-//         {
-//             _repo = repo;
-//             _mapper = mapper;
-//             _context = context;
-//         }
-
-//         // get by ProductId
-//         public async Task<BomResponseDto?> GetBomByProductAsync(int productId)
-//         {
-//             var bomList = await _repo.GetByProductIdAsync(productId);
-//             Console.WriteLine(bomList);
-//             if (!bomList.Any())
-//                 throw new NotFoundException("BOMs not found");
-
-//             var first = bomList.First();
-
-//             var response = new BomResponseDto
-//             {
-//                 productId = first.ProductId,
-//                 productName = first.Product!.Name,
-//                 BomItems = _mapper.Map<List<BomResponseItemDto>>(bomList)
-//             };
-//             return response;
-//         }
-
-
-//         public async Task<string> CreateBomAsync(BomCreateDto dto)
-//         {
-//             // 1. Safety Lock (Transaction)
-//             using var transaction = await _context.Database.BeginTransactionAsync();
-
-//             try
-//             {
-//                 // 2. Validate Product (Kya Product exist karta hai?)
-//                 var productExists = await _context.Products.AnyAsync(p => p.ProductId == dto.productId);
-//                 if (!productExists)
-//                     return "Error: Product ID invalid.";
-
-//                 // 3. Validate Duplicate (Kya BOMs already hai? Agar haan, toh error do ya update logic lagao)
-//                 var bomExists = await _repo.ExistsAsync(dto.productId);
-//                 if (bomExists)
-//                     return "Error: BOMs already exists for this product. Use Update API.";
-
-//                 // 4. List taiyaar karo Database ke liye
-//                 var bomEntities = new List<BackendAPI.Models.Bom>();
-
-//                 foreach (var item in dto.BomItems)
-//                 {
-//                     // Optional: Check karo Raw Material exist karta hai ya nahi
-//                     var rmExists = await _context.RawMaterials.AnyAsync(r => r.RawMaterialId == item.RawMaterialId);
-//                     if (!rmExists) 
-//                         return $"Error: Raw Material ID {item.RawMaterialId} not found.";
-
-//                     // 5. MAPPING (DTO -> Entity)
-//                     // DTO se data nikal kar Model mein bhar rahe hain
-//                     bomEntities.Add(new BackendAPI.Models.Bom
-//                     {
-//                         ProductId = dto.productId,
-//                         RawMaterialId = item.RawMaterialId,
-//                         QuantityRequired = item.QuantityRequired,
-//                         CreatedByUserId = 1 // Abhi ke liye hardcode, baad mein JWT se nikalenge
-//                     });
-//                 }
-
-//                 // 6. Save to DB (Bulk Insert via Repository)
-//                 await _repo.AddRangeAsync(bomEntities);
-
-//                 // 7. Sab sahi hai, commit karo
-//                 await transaction.CommitAsync();
-//                 return "Success";
-//             }
-//             catch (Exception ex)
-//             {
-//                 // Kuch galti hui toh wapas undo karo
-//                 await transaction.RollbackAsync();
-//                 return $"Error: {ex.Message}";
-//             }
-//         }
-//     }
-// }

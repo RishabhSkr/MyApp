@@ -5,13 +5,15 @@ namespace BackendAPI.Services.Production
     public interface IProductionService
     {
         Task<IEnumerable<PendingOrderDto>> GetPendingSalesOrdersAsync();
-        Task<ProductionPlanningInfoDto> GetPlanningInfoAsync(int salesOrderId);
-        Task<IEnumerable<ProductionOrderListDto>> GetAllProductionOrdersAsync(int? salesOrderId = null);
-        Task<string> CreateProductionPlanAsync(CreateProductionDto dto, int userId);
-        Task<string> StartProductionAsync(int poId, int userId);
-        // Task<string> CompleteProductionAsync(int productionOrderId, int userId);
+        Task<ProductionPlanningInfoDto> GetPlanningInfoAsync(Guid salesOrderId);
+        Task<IEnumerable<ProductionOrderListDto>> GetAllProductionOrdersAsync(Guid? salesOrderId = null);
+        Task<string> CreateProductionPlanAsync(CreateProductionDto dto, Guid userId);
+        Task<string> StartProductionAsync(Guid poId, Guid userId);
+        // Task<string> CompleteProductionAsync(Guid productionOrderId, Guid userId);
 
-        Task<string> CompleteProductionAsync(CompleteProductionDto dto, int userId);
-        Task<string> CancelProductionOrderAsync(int productionOrderId, int userId);
+        Task<string> CompleteProductionAsync(CompleteProductionDto dto, Guid userId);
+        Task<string> CancelProductionOrderAsync(Guid productionOrderId, Guid userId);
+        Task<string> ReleaseProductionOrderAsync(Guid productionOrderId, Guid userId);
+        Task<string> UpdateProductionOrderAsync(Guid productionOrderId,DateTime plannedStartDate,DateTime plannedEndDate, decimal newQuantity, Guid userId);
     }
 }

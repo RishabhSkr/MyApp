@@ -5,7 +5,7 @@ namespace BackendAPI.Dtos.Production
     public class CompleteProductionDto
     {
         [Required]
-        public int ProductionOrderId { get; set; }
+        public Guid ProductionOrderId { get; set; }
 
         // Worker batayega ki machine kharab hone tak kitna bana
         [Required]

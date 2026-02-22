@@ -45,6 +45,7 @@ const Sidebar = () => {
                         { path: '/production-create-order', name: 'Create Order', icon: ChefHat },
                         { path: '/production-plan', name: 'Order Management', icon: Clock },
                         { path: '/production-orders', name: 'All Orders', icon: ListOrdered },
+                        { path: '/production/bom', name: 'Bill of Materials (BOM)' }
                         // { path: '/production-start-order', name: 'Start Order', icon: PlayCircle },
                         // { path: '/production-complete-order', name: 'Complete Order', icon: PlayCircle },
                     ]
@@ -64,8 +65,8 @@ const Sidebar = () => {
                     type: 'sub', 
                     subItems: [
                         { path: '/masters/raw-materials', name: 'Raw Materials' },
-                        { path: '/masters/products', name: 'Products (FG)' },
-                        { path: '/masters/bom', name: 'Bill of Materials (BOM)' }
+                        { path: '/masters/products', name: 'Products (FG)' }
+                        
                     ]
                 }
             ]

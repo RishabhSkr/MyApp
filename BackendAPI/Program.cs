@@ -1,54 +1,44 @@
 using BackendAPI.Data;
-using BackendAPI.Mapping;
 using Microsoft.EntityFrameworkCore;
 using BackendAPI.Middleware;
-using Microsoft.AspNetCore.Authorization;
 
 // Services
-using BackendAPI.Services.Product;
 using BackendAPI.Services.Production;
 using BackendAPI.Services.Bom;
-using BackendAPI.Services.RawMaterial;
-using BackendAPI.Services.FinishedGoods;
-using BackendAPI.Services.Auth;
+using BackendAPI.HttpClients;
 
 // Repositories
-using BackendAPI.Repositories.ProductRepository;
 using BackendAPI.Repositories.BomRepository;
-using BackendAPI.Repositories.RawMaterial;
 using BackendAPI.Repositories.ProductionRepository;
-using BackendAPI.Repositories.FinishedGoodsRepository;
-using BackendAPI.Repositories.SalesRepository;
-using BackendAPI.Services.Sales;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Finished Goods Inventory
 
 // Add SQL Server Connection
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// jwt
-builder.Services.AddScoped<IAuthorizationHandler, AccessControlHandler>();
-builder.Services.AddScoped<JwtService>();
 //  DI
-builder.Services.AddScoped<IFinishedGoodsRepository,FinishedGoodsRepository>();
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductionRepository,ProductionRepository>();
 builder.Services.AddScoped<IBomRepository, BomRepository>();
-builder.Services.AddScoped<IRawMaterialRepository, RawMaterialRepository>();
-builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 
 // Services
-builder.Services.AddScoped<IFinishedGoodsService,FinishedGoodsService>();
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IRawMaterialService, RawMaterialService>();
-builder.Services.AddScoped<ISalesService, SalesService>();
+
+// TODO: Switch to real HTTP clients when other services are ready
+// builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client => 
+//     client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"]??"")
+// );
+// builder.Services.AddHttpClient<ISalesServiceClient, SalesServiceClient>(client => 
+//     client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"]??"")
+// );
+
+// MOCK clients for local testing (no external services needed)
+builder.Services.AddSingleton<ISalesServiceClient, BackendAPI.HttpClients.Mock.MockSalesServiceClient>();
+builder.Services.AddSingleton<IInventoryServiceClient, BackendAPI.HttpClients.Mock.MockInventoryServiceClient>();
 
 
 builder.Services.AddControllers();
@@ -61,7 +51,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173") 
+            policy.WithOrigins("http://localhost:5180") 
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -69,38 +59,6 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 
-
-
-// Automapper
-builder.Services.AddAutoMapper(typeof(ProductProfile));
-
-builder.Services.AddScoped<IAuthorizationHandler, AccessControlHandler>();
-// TODO: jwt validation-need to revisit
-// Configure JWT Authentication & Register Custom Policy
-builder.Services.AddAuthorization(options => {
-        options.AddPolicy("DynamicAccess", policy => {
-        policy.RequireAuthenticatedUser();
-        policy.AddRequirements(new AccessRequirement());
-        });
-    });
-    
-// builder.Services.AddAuthentication("Bearer")
-//     .AddJwtBearer("Bearer", options =>
-//     {
-//         options.TokenValidationParameters = new TokenValidationParameters
-//         {
-//             ValidateIssuer = true,
-//             ValidateAudience = true,
-//             ValidateLifetime = true,
-//             ValidateIssuerSigningKey = true,
-
-//             ValidIssuer = builder.Configuration["Jwt:Issuer"],
-//             ValidAudience = builder.Configuration["Jwt:Audience"],
-//             IssuerSigningKey = new SymmetricSecurityKey(
-//                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
-//             )
-//         };
-//     });
 
 var app = builder.Build();
 // Middleware
@@ -122,21 +80,8 @@ app.MapGet("/", async context =>
 
 // before auth
 app.UseCors("AllowFrontend");
-app.UseAuthentication();
-
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
 app.MapControllers();
-
-// seed data
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<AppDbContext>();
-    
-    
-    DbInitializer.Initialize(context);
-}
 
 app.Run();

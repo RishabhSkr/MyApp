@@ -18,21 +18,17 @@ namespace BackendAPI.Repositories.BomRepository
         {
             // Humein Product aur RawMaterial dono ka data chahiye
             return await _context.BOMs
-                                .Include(b => b.Product)      // Product Name ke liye
-                                .Include(b => b.RawMaterial)  // Material Name & SKU ke liye
                                 .Where(b => b.IsActive)       // Sirf Active Records
                                 .ToListAsync();
         }
-        public async Task<bool> ExistsAsync(int productId)
+        public async Task<bool> ExistsAsync(Guid productId)
         {
             return await _context.BOMs.AnyAsync(b => b.ProductId == productId && b.IsActive);
         }
 
-       public async Task<IEnumerable<BomEntity>> GetByProductIdAsync(int productId)
+       public async Task<IEnumerable<BomEntity>> GetByProductIdAsync(Guid productId)
         {
             return await _context.BOMs
-                        .Include(b => b.RawMaterial) 
-                        .Include(b => b.Product)   
                         .Where(b => b.ProductId == productId && b.IsActive)
                         .ToListAsync();
         }
@@ -42,7 +38,7 @@ namespace BackendAPI.Repositories.BomRepository
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteByProductIdAsync(int productId)
+        public async Task DeleteByProductIdAsync(Guid productId)
         {
             // Soft Delete Logic:
             // Purani recipe ko 'IsActive = false' mark karo
