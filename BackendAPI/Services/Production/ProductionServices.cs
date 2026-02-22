@@ -6,6 +6,7 @@ using ProdOrder = BackendAPI.Models.ProductionOrder;
 using BackendAPI.HttpClients;
 using BackendAPI.HttpClients.Dtos;
 using BackendAPI.Utilities;
+using BackendAPI.Constants;
 
 namespace BackendAPI.Services.Production
 {
@@ -38,22 +39,27 @@ namespace BackendAPI.Services.Production
 
             var orders = await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
             var result = new List<ProductionOrderListDto>();
-
+            Console.WriteLine(orders);
             foreach(var p in orders)
             {
                 var product = await _inventoryService.GetProductAsync(p.ProductId);
                 result.Add(new ProductionOrderListDto
                 {
                     ProductionOrderId = p.ProductionOrderId,
+                    OrderNumber = p.OrderNumber,
                     SalesOrderId = p.SalesOrderId,
-                    ProductName = product?.Name?? "Unknown",
+                    ProductName = product?.Name?? EventStatus.UNKNOWN,
                     BatchQuantity = p.PlannedQuantity,
                     ProducedQuantity = p.ProducedQuantity,
                     ScrapQuantity = p.ScrapQuantity,
+                    UnusedReturnedQuantity = p.UnusedReturnedQuantity,
                     Status = p.Status,
-                    PlannedDate = p.PlannedStartDate,
+                    PlannedStartDate = p.PlannedStartDate,
+                    PlannedEndDate = p.PlannedEndDate,
                     ActualStartDate = p.ActualStartDate,
-                    ActualEndDate = p.ActualEndDate
+                    ActualEndDate = p.ActualEndDate,
+                    CreatedByUserId = p.CreatedByUserId,
+                    UpdatedByUserId = p.UpdatedByUserId
 
                 }); 
             }
@@ -77,14 +83,20 @@ namespace BackendAPI.Services.Production
                                                 .ToListAsync();
                 // kitna produced hua
                 decimal produced = allBatches
-                                            .Where(p => p.Status == "Completed")
+                                            .Where(p => p.Status == EventStatus.COMPLETED)
                                             .Sum(p => p.ProducedQuantity);
                 // kitna pending
                 decimal pipeline = allBatches
-                                            .Where(p => p.Status != "Completed" && p.Status != "Cancelled")
+                                            .Where(p => p.Status != EventStatus.COMPLETED && p.Status != EventStatus.CANCELLED)
                                             .Sum(p => p.PlannedQuantity);
-                // kitna unplanned(bacha hai)
+                // Skip fully completed orders (produced enough + no active batches)
+                if (produced >= so.Quantity && pipeline == 0)
+                    continue;
+
+                // kitna unplanned(bacha hai) — consistent with GetTotalPlannedQtyBySalesOrderIdAsync
+                // produced(Completed→ProducedQty) + pipeline(Active→PlannedQty)
                 decimal unplanned = so.Quantity - (produced + pipeline);
+
                 if(unplanned < 0) unplanned = 0;
 
                 int progress = 0;
@@ -93,16 +105,16 @@ namespace BackendAPI.Services.Production
                     progress = (int)(produced / so.Quantity * 100);
                 }
                 // status logic
-                string displayStatus = "New";
-                if(pipeline > 0 && produced==0) displayStatus = "Planned";
-                else if(produced > 0) displayStatus = "In Production";
+                string displayStatus = EventStatus.NEW;
+                if(pipeline > 0 && produced==0) displayStatus = EventStatus.PLANNED;
+                else if(produced > 0) displayStatus = EventStatus.IN_PROGRESS;
 
                 list.Add(new PendingOrderDto
                 {
                     SalesOrderId = so.Id,
                     CustomerName = "", // TODO: Get customer name from sales API
-                    ProductName = product?.Name??"Unknown",
-                    OrderDate = DateTime.MinValue, // TODO: Get order date from sales API
+                    ProductName = product?.Name??EventStatus.UNKNOWN,
+                    OrderDate = so.OrderDate, // TODO: Get order date from sales API
                     TotalQuantity = so.Quantity,
                     ProducedQuantity = produced,
                     InPipelineQuantity = pipeline,
@@ -134,7 +146,7 @@ namespace BackendAPI.Services.Production
             var rawMaterials = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
 
             decimal maxPossible = decimal.MaxValue;
-            string limiter = "None";
+            string limiter = EventStatus.NONE;
 
             foreach(var item in bom)
             {
@@ -173,22 +185,30 @@ namespace BackendAPI.Services.Production
                 SuggestedBatchSize = suggestion.SuggestedBatchSize,
                 BatchSizes = suggestion.BatchSizes,
                 MinEfficiency = suggestion.MinEfficiency,
-                AvgEfficiency = suggestion.AvgEfficiency,
-                IsOptimal = suggestion.IsOptimal
+                FullCapacityBatches = suggestion.FullCapacityBatches
             };
         }
 
-        // Create PO (Create Production Order)
+        // Create PO ( Production Order)
         public async Task<string> CreateProductionPlanAsync(CreateProductionDto dto, Guid userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
-            {
+            {   var existingBatches = await _context.ProductionOrders
+                .Where(po => po.SalesOrderId == dto.SalesOrderId && po.Status != EventStatus.CANCELLED)
+                .ToListAsync();
+                
                 var so = await _salesService.GetSalesOrderAsync(dto.SalesOrderId);
                 if (so == null) return "Sales Order not found";
 
                 // Product info for capacity check
                 var product = await _inventoryService.GetProductAsync(so.ProductId);
+                decimal maxCap = product?.MaxDailyCapacity ?? 0;
+
+                // HARD LIMIT: Batch cannot exceed machine capacity 
+                if (maxCap > 0 && dto.QuantityToProduce > maxCap)
+                    return $"Error: Batch quantity ({dto.QuantityToProduce}) exceeds machine daily capacity ({maxCap}). " +
+                           $"Maximum allowed per batch: {maxCap}. Use Smart Batch Suggestion for optimal batch sizes.";
 
                 decimal planned = await _repo.GetTotalPlannedQtyBySalesOrderIdAsync(dto.SalesOrderId);
                 decimal totalRemaining = so.Quantity - planned;
@@ -196,30 +216,49 @@ namespace BackendAPI.Services.Production
                 if (dto.QuantityToProduce > totalRemaining)
                     return "Error: Either Order is completed or you are creating more than remaining quantity";
 
-                // Efficiency check — below 50% = machine waste
-                if (!dto.ForceCreate)
+                // BUFFER CAP: Total planned cannot exceed 120% of SO quantity
+                decimal totalAllPlanned = existingBatches.Sum(b => b.PlannedQuantity) + dto.QuantityToProduce;
+                decimal maxAllowed = so.Quantity * 1.20m;  // 20% buffer
+                if (!dto.ForceCreate && totalAllPlanned > maxAllowed)
+                    return $"Error: Total planned ({totalAllPlanned}) exceeds 120% buffer of SO quantity ({so.Quantity}). " +
+                           $"Max allowed: {maxAllowed}. Review your scrap rates.";
+                // Efficiency check — below 50% = machine waste (ForceCreate se override )
+                if (!dto.ForceCreate && maxCap > 0)
                 {
-                    decimal maxCap = product?.MaxDailyCapacity ?? 0;
-                    
-                    if (maxCap > 0)
-                    {
-                        decimal efficiency = BatchOptimizer.GetEfficiency(dto.QuantityToProduce, maxCap);
+                    decimal efficiency = BatchOptimizer.GetEfficiency(dto.QuantityToProduce, maxCap);
 
-                        if (efficiency < BatchOptimizer.MIN_EFFICIENCY_THRESHOLD)
-                            return $"Efficiency Warning: Batch of {dto.QuantityToProduce} runs at only {efficiency}% machine efficiency. " +
-                                   $"Minimum threshold: {BatchOptimizer.MIN_EFFICIENCY_THRESHOLD}%. Use ForceCreate=true to override.";
-                    }
+                    if (efficiency < BatchOptimizer.MIN_EFFICIENCY_THRESHOLD)
+                        return $"Efficiency Warning: Batch of {dto.QuantityToProduce} runs at only {efficiency}% machine efficiency. " +
+                               $"Minimum threshold: {BatchOptimizer.MIN_EFFICIENCY_THRESHOLD}%.";
+                }
+
+                // OrderNumber: Custom ya Auto-Generate
+                string orderNumber;
+                if (!string.IsNullOrWhiteSpace(dto.CustomOrderNumber))
+                {
+                    // Custom OrderNumber by User  — duplicate check
+                    bool exists = await _context.ProductionOrders
+                        .AnyAsync(p => p.OrderNumber == dto.CustomOrderNumber);
+                    if (exists)
+                        return $"Error: OrderNumber '{dto.CustomOrderNumber}' already exists. Use a different one.";
+                    orderNumber = dto.CustomOrderNumber;
+                }
+                else
+                {
+                    // System auto-generate (PO-YYYYMMDD-XXXX)
+                    orderNumber = await OrderNumberGenerator.GenerateAsync(_context);
                 }
 
                 // Create PO (status = "Created", NO inventory reservation yet)
                 var po = new ProdOrder
                 {
+                    OrderNumber = orderNumber,
                     SalesOrderId = so.Id,
                     ProductId = so.ProductId,
                     PlannedQuantity = dto.QuantityToProduce,
                     PlannedStartDate = dto.PlannedStartDate,
                     PlannedEndDate = dto.PlannedEndDate,
-                    Status = "Created",
+                    Status = EventStatus.CREATED,
                     CreatedByUserId = userId
                 };
                 await _repo.AddAsync(po);
@@ -232,7 +271,7 @@ namespace BackendAPI.Services.Production
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch(Exception ex) {
                 await transaction.RollbackAsync();
@@ -245,7 +284,7 @@ namespace BackendAPI.Services.Production
         {
             var po = await _context.ProductionOrders.FindAsync(productionOrderId);
             if (po == null) return "Order not found.";
-            if (po.Status != "Created") return "Error: Only 'Created' orders can be Released.";
+            if (po.Status != EventStatus.CREATED) return "Error: Only 'Created' orders can be Released.";
 
             // BOM se material list laao
             var boms = await _context.BOMs
@@ -264,26 +303,26 @@ namespace BackendAPI.Services.Production
             var reserved = await _inventoryService.ReserveMaterialsAsync(new InventoryReservationRequest
             {
                 ProductionOrderId = po.ProductionOrderId,
-                MovementType = "RESERVE",
+                MovementType = InventoryMovementType.RESERVE,
                 Items = items
             });
 
             if (!reserved) return "Error: Inventory service failed to reserve materials.";
 
-            po.Status = "Released";
+            po.Status = EventStatus.RELEASED;
             po.UpdatedByUserId = userId;
             await _context.SaveChangesAsync();
-            return "Success";
+            return EventStatus.SUCCESS;
         }
         
         // UPDATE QTY: Only for "Created" status (before release)
-        public async Task<string> UpdateProductionQtyAsync(Guid productionOrderId, decimal newQuantity, Guid userId)
+        public async Task<string> UpdateProductionOrderAsync(Guid productionOrderId,DateTime plannedStartDate,DateTime plannedEndDate, decimal newQuantity, Guid userId)
         {
             if (newQuantity <= 0) return "Error: Quantity must be greater than 0.";
 
             var po = await _context.ProductionOrders.FindAsync(productionOrderId);
             if (po == null) return "Order not found.";
-            if (po.Status != "Created") return "Error: Quantity can only be updated for 'Created' orders.";
+            if (po.Status != EventStatus.CREATED) return "Error: Quantity can only be updated for 'Created' orders.";
 
             // Check remaining capacity
             var so = await _salesService.GetSalesOrderAsync(po.SalesOrderId);
@@ -292,7 +331,7 @@ namespace BackendAPI.Services.Production
             decimal otherPlanned = await _context.ProductionOrders
                 .Where(p => p.SalesOrderId == po.SalesOrderId
                         && p.ProductionOrderId != po.ProductionOrderId
-                        && p.Status != "Cancelled")
+                        && p.Status != EventStatus.CANCELLED)
                 .SumAsync(p => p.PlannedQuantity);
 
             decimal remaining = so.Quantity - otherPlanned;
@@ -300,22 +339,24 @@ namespace BackendAPI.Services.Production
                 return $"Error: Max allowed is {remaining}. Other batches already planned.";
 
             po.PlannedQuantity = newQuantity;
+            po.PlannedStartDate = plannedStartDate;
+            po.PlannedEndDate = plannedEndDate;
             po.UpdatedByUserId = userId;
             await _context.SaveChangesAsync();
-            return "Success";
+            return EventStatus.SUCCESS;
         }
         //  START PRODUCTION
         public async Task<string> StartProductionAsync(Guid poId, Guid userId)
         {
             var po = await _context.ProductionOrders.FindAsync(poId);
-            if(po == null || po.Status != "Release") return "Invalid Order or Status";
+            if(po == null || po.Status != EventStatus.RELEASED) return "Invalid Order or Status";
 
-            po.Status = "In Progress";
+            po.Status = EventStatus.IN_PROGRESS;
             po.ActualStartDate = DateTime.Now;
             po.UpdatedByUserId = userId;
 
             // SO update via HTTP
-            await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, "In Production");
+            await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, EventStatus.IN_PROGRESS);
 
             await _context.SaveChangesAsync();
             return "Success";
@@ -329,7 +370,7 @@ namespace BackendAPI.Services.Production
             {
                 var po = await _context.ProductionOrders.FindAsync(dto.ProductionOrderId);
                 if (po == null) return "Order not found.";
-                if (po.Status != "In Progress") return "Error: Order must be 'In Progress' to complete.";
+                if (po.Status != EventStatus.IN_PROGRESS) return "Error: Order must be 'In Progress' to complete.";
 
                 if (dto.ActualProducedQuantity > po.PlannedQuantity)
                     return $"Error: Cannot produce {dto.ActualProducedQuantity}. Max Plan was {po.PlannedQuantity}.";
@@ -362,7 +403,7 @@ namespace BackendAPI.Services.Production
                     await _inventoryService.ReturnMaterialsAsync(new InventoryReservationRequest
                     {
                         ProductionOrderId = po.ProductionOrderId,
-                        MovementType = "UNUSED_RETURN",
+                        MovementType = InventoryMovementType.UNUSED_RETURN,
                         Items = items
                     });
                 }
@@ -376,31 +417,34 @@ namespace BackendAPI.Services.Production
                         ProductId = po.ProductId,
                         ProducedQuantity = produced,
                         ScrapQuantity = scrap,
-                        MovementType = "PRODUCTION"
+                        MovementType = InventoryMovementType.PRODUCTION
                     });
                 }
 
                 // C. UPDATE PO
-                po.Status = "Completed";
+                po.Status = EventStatus.COMPLETED;
                 po.ActualEndDate = DateTime.Now;
                 po.ProducedQuantity = produced;
                 po.ScrapQuantity = scrap;
+                po.UnusedReturnedQuantity = unused;
                 po.UpdatedByUserId = userId;
 
                 // D. Check SO completion
                 decimal previousDone = await _context.ProductionOrders
-                    .Where(p => p.SalesOrderId == po.SalesOrderId && p.Status == "Completed" && p.ProductionOrderId != po.ProductionOrderId)
+                    .Where(p => p.SalesOrderId == po.SalesOrderId && p.Status == EventStatus.COMPLETED && p.ProductionOrderId != po.ProductionOrderId)
                     .SumAsync(p => p.ProducedQuantity);
 
                 decimal totalDone = previousDone + produced;
                 var so = await _salesService.GetSalesOrderAsync(po.SalesOrderId);
                 
                 if (so != null && totalDone >= so.Quantity)
-                    await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, "Completed");
+                    await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, EventStatus.COMPLETED);
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return "Success";
+
+                // Detailed summary 
+                return $"Success|Planned:{po.PlannedQuantity}|Produced:{produced}|Scrap:{scrap}|UnusedReturned:{unused}";
             }
             catch (Exception ex)
             {
@@ -419,11 +463,11 @@ namespace BackendAPI.Services.Production
                 var po = await _context.ProductionOrders.FindAsync(productionOrderId);
                 if (po == null) return "Order not found.";
 
-                if (po.Status != "Created" && po.Status != "Released")
+                if (po.Status != EventStatus.CREATED && po.Status != EventStatus.RELEASED)
                     return "Error: Only 'Created' or 'Released' orders can be cancelled.";
 
                 // INVENTORY RETURN via HTTP (only if Released — material reserved tha)
-                if (po.Status == "Released")
+                if (po.Status == EventStatus.RELEASED)
                 {
                     var boms = await _context.BOMs
                                 .Where(b => b.ProductId == po.ProductId && b.IsActive)
@@ -438,13 +482,13 @@ namespace BackendAPI.Services.Production
                     await _inventoryService.ReturnMaterialsAsync(new InventoryReservationRequest
                     {
                         ProductionOrderId = po.ProductionOrderId,
-                        MovementType = "CANCEL_RETURN",
+                        MovementType = InventoryMovementType.CANCEL_RETURN,
                         Items = items
                     });
                 }
 
                 // UPDATE STATUS
-                po.Status = "Cancelled";
+                po.Status = EventStatus.CANCELLED;
                 po.UpdatedByUserId = userId;
                 po.ActualEndDate = DateTime.Now;
 
@@ -452,16 +496,16 @@ namespace BackendAPI.Services.Production
                 bool hasActivePOs = await _context.ProductionOrders
                     .AnyAsync(p => p.SalesOrderId == po.SalesOrderId
                                 && p.ProductionOrderId != po.ProductionOrderId
-                                && p.Status != "Cancelled");
+                                && p.Status != EventStatus.CANCELLED);
 
                 if (!hasActivePOs)
                 {
-                    await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, "Pending");
+                    await _salesService.UpdateSalesOrderStatusAsync(po.SalesOrderId, EventStatus.PENDING);
                 }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch (Exception ex)
             {

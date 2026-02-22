@@ -2,6 +2,8 @@ using BackendAPI.Data;
 using BackendAPI.Dtos.Bom;
 using BackendAPI.HttpClients;
 using BackendAPI.Repositories.BomRepository;
+using BackendAPI.Constants;
+using BackendAPI.Utilities;
 
 // Alias
 using BomEntity = BackendAPI.Models.Bom; 
@@ -47,7 +49,9 @@ namespace BackendAPI.Services.Bom
                 .Select(g => new BomResponseDto
                 {
                     ProductId = g.Key,
-                    ProductName = products.GetValueOrDefault(g.Key, "Unknown"),
+                    ProductName = products.GetValueOrDefault(g.Key, EventStatus.UNKNOWN),
+                    BomNumber = g.First().BomNumber,
+                    Version = g.First().Version,
                     CreatedAt = g.First().CreatedAt,
                     UpdatedAt = g.First().UpdatedAt,
                     CreatedByUserId = g.First().CreatedByUserId,
@@ -58,7 +62,7 @@ namespace BackendAPI.Services.Bom
                         return new BomItemDto
                         {
                             RawMaterialId = b.RawMaterialId,
-                            RawMaterialName = rm?.Name ?? "Unknown",
+                            RawMaterialName = rm?.Name ?? EventStatus.UNKNOWN,
                             SKU = rm?.SKU ?? "",
                             QuantityRequired = b.QuantityRequired,
                             UOM = rm?.UOM ?? ""
@@ -87,7 +91,9 @@ namespace BackendAPI.Services.Bom
             return new BomResponseDto
             {
                 ProductId = productId,
-                ProductName = product?.Name ?? "Unknown",
+                ProductName = product?.Name ?? EventStatus.UNKNOWN,
+                BomNumber = boms.First().BomNumber,
+                Version = boms.First().Version,
                 CreatedAt = boms.First().CreatedAt,
                 UpdatedAt = boms.First().UpdatedAt,
                 CreatedByUserId = boms.First().CreatedByUserId,
@@ -98,7 +104,7 @@ namespace BackendAPI.Services.Bom
                     return new BomItemDto
                     {
                         RawMaterialId = b.RawMaterialId,
-                        RawMaterialName = rm?.Name ?? "",
+                        RawMaterialName = rm?.Name ?? EventStatus.UNKNOWN,
                         SKU = rm?.SKU ?? "",
                         QuantityRequired = b.QuantityRequired,
                         UOM = rm?.UOM ?? ""
@@ -113,12 +119,22 @@ namespace BackendAPI.Services.Bom
             if (await _repo.ExistsAsync(dto.ProductId))
                 return "Error: BOM already exists for this product. Use Update instead.";
 
+            // Verify Product + Raw Materials exist in Inventory
+            var validation = await ValidateInventoryAsync(dto);
+            if (validation != null) return validation;
+
+            // Get product code for BomNumber generation
+            var product = await _inventoryService.GetProductAsync(dto.ProductId);
+            var bomNumber = await BomNumberGenerator.GenerateAsync(_context, product!.ProductCode);
+
             var bomList = new List<BomEntity>();
 
             foreach (var item in dto.BomItems)
             {
                 bomList.Add(new BomEntity
                 {
+                    BomNumber = bomNumber,
+                    Version = 1.0m,
                     ProductId = dto.ProductId,
                     RawMaterialId = item.RawMaterialId,
                     QuantityRequired = item.QuantityRequired,
@@ -127,16 +143,29 @@ namespace BackendAPI.Services.Bom
             }
 
             await _repo.AddRangeAsync(bomList);
-            return "Success";
+            return EventStatus.SUCCESS;
         }
 
         // UPDATE BOM (Transaction: Soft Delete Old + Insert New)
         public async Task<string> UpdateBomAsync(Guid productId, BomCreateDto dto, Guid userId)
         {
+            // Verify Product + Raw Materials exist in Inventory
+            var validation = await ValidateInventoryAsync(dto);
+            if (validation != null) return validation;
+
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 if (dto.ProductId != productId) return "Error: Product ID mismatch.";
+
+                // Get old BomNumber + Version before deleting
+                var oldBoms = await _repo.GetByProductIdAsync(productId);
+                string bomNumber = oldBoms.First().BomNumber;
+                decimal oldVersion = oldBoms.First().Version;
+                decimal newVersion = oldVersion + 0.1m;
+
+                // Preserve original creator
+                Guid originalCreatedBy = oldBoms.First().CreatedByUserId;
 
                 await _repo.DeleteByProductIdAsync(productId);
 
@@ -145,18 +174,21 @@ namespace BackendAPI.Services.Bom
                 {
                     newBoms.Add(new BomEntity
                     {
+                        BomNumber = bomNumber,             // Same BomNumber
+                        Version = newVersion,               // Version incremented
                         ProductId = productId,
                         RawMaterialId = item.RawMaterialId,
                         QuantityRequired = item.QuantityRequired,
-                        CreatedByUserId = userId,
-                        UpdatedByUserId = userId
+                        CreatedByUserId = originalCreatedBy, // Original creator preserved
+                        UpdatedByUserId = userId,            // Who updated now
+                        UpdatedAt = DateTime.UtcNow          // Last updated = NOW
                     });
                 }
 
                 await _repo.AddRangeAsync(newBoms);
 
                 await transaction.CommitAsync();
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch (Exception ex)
             {
@@ -172,12 +204,32 @@ namespace BackendAPI.Services.Bom
                     return "Error: BOM not found.";
 
                 await _repo.DeleteByProductIdAsync(productId);
-                return "Success";
+                return EventStatus.SUCCESS;
             }
             catch (Exception ex)
             {
                 return $"Error: {ex.Message}";
             }
+        }
+
+        // ─── SHARED VALIDATION ───
+        private async Task<string?> ValidateInventoryAsync(BomCreateDto dto)
+        {
+            //  Product exist 
+            var product = await _inventoryService.GetProductAsync(dto.ProductId);
+            if (product == null)
+                return $"Error: Product '{dto.ProductId}' not found in Inventory.";
+
+            // Sab Raw Materials exist 
+            var rmIds = dto.BomItems.Select(i => i.RawMaterialId).Distinct().ToList();
+            var foundRMs = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+            var foundIds = foundRMs.Select(r => r.Id).ToHashSet();
+
+            var missingIds = rmIds.Where(id => !foundIds.Contains(id)).ToList();
+            if (missingIds.Any())
+                return $"Error: Raw Materials not found in Inventory: {string.Join(", ", missingIds)}";
+
+            return null; 
         }
     }
 }

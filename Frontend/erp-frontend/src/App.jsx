@@ -23,7 +23,6 @@ function App() {
           {/* Masters Routes */}
           <Route path="/masters/raw-materials" element={<RawMaterial />} />
           <Route path="/masters/products" element={<Products />} />
-          <Route path="/masters/bom" element={<BOM />} />
          
           <Route path="/production-plan" element={<OrderManagement />} />
           <Route path="/production-create-order" element={<CreateOrder />} />
@@ -33,6 +32,7 @@ function App() {
 
           {/* Production */}
           <Route path="/production-orders" element={<Production />} />
+          <Route path="/production/bom" element={<BOM />} />
 
 
         </Routes>

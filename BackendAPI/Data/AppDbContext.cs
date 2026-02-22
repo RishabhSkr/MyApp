@@ -51,12 +51,19 @@ namespace BackendAPI.Data
                 e.Property(p => p.PlannedQuantity).HasPrecision(18, 2);
                 e.Property(p => p.ProducedQuantity).HasPrecision(18, 2);
                 e.Property(p => p.ScrapQuantity).HasPrecision(18, 2);
+                e.Property(p => p.UnusedReturnedQuantity).HasPrecision(18, 2);
+
+                // OrderNumber must be unique + max 50 chars
+                e.Property(p => p.OrderNumber).HasMaxLength(50);
+                e.HasIndex(p => p.OrderNumber).IsUnique();
             });
 
             // BOM (Soft Delete hone only active pr unique contraint lagao)
             modelBuilder.Entity<Bom>(e => {
                 e.HasKey(b => b.Id);
                 e.Property(b => b.QuantityRequired).HasPrecision(18, 2);
+                e.Property(b => b.Version).HasPrecision(5, 1);
+                e.Property(b => b.BomNumber).HasMaxLength(50);
                 e.HasIndex(b => new { b.ProductId, b.RawMaterialId })
                     .IsUnique()
                     .HasFilter("[IsActive] = 1");

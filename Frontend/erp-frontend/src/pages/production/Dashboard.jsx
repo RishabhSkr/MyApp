@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import PlanningModal from '../../components/production/PlanningModal';
 import useApi from '../../hooks/useApi'; // 1. Import Hook
@@ -10,12 +11,14 @@ import {
 
 const Dashboard = () => {
     // Data States
+    const location = useLocation();
     const [orders, setOrders] = useState([]);
     
     // Modal & Selection States
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [planningData, setPlanningData] = useState(null);
     const [selectedOrderId, setSelectedOrderId] = useState(null);
+    console.log(planningData,selectedOrderId);
 
     const { loading: isLoading, requestHandlerFunction } = useApi();
 
@@ -38,7 +41,7 @@ const Dashboard = () => {
     // Initial Load
     useEffect(() => {
     loadDashboardData();
-}, [loadDashboardData]);
+}, [loadDashboardData,location.key]);
 
 
     //  Plan Button Click (Fetch Planning Info)
@@ -62,12 +65,13 @@ const handlePlanClick = async (soId) => {
         }
     };
     // 5. Create Batch (Submit Plan)
-    const handleCreateBatch = async (quantity, startDate, endDate) => {
+    const handleCreateBatch = async (quantity, startDate, endDate, forceCreate = false) => {
         const payload = {
             salesOrderId: selectedOrderId,
             quantityToProduce: parseInt(quantity),
             plannedStartDate: new Date(startDate).toISOString(),
             plannedEndDate: new Date(endDate).toISOString(),
+            forceCreate: forceCreate,
         };
 
         const response = await requestHandlerFunction(

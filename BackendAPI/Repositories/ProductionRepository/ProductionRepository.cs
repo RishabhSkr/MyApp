@@ -36,12 +36,14 @@ namespace BackendAPI.Repositories.ProductionRepository
                                .Where(p => p.Status != "Cancelled")
                                .ToListAsync();
 
-            //  Conditional Sum:
-            // Agar Complete hai -> To 'Produced' gino (Real)
-            // Agar Planned/InProgress hai -> To 'Planned' gino (Target)
-            return orders.Sum(p => p.Status == "Completed" ? p.ProducedQuantity : p.PlannedQuantity);
-
-            
+            // Hybrid Sum: Consistent formula
+            // Completed → ProducedQty (actual output — scrap/unused excluded)
+            // Active (Planned/Released/InProgress) → PlannedQty (target — blocks room)
+            // This naturally handles:
+            //   - Over-planning prevention: active batches block room via PlannedQty
+            //   - Shortfall re-planning: completed batch scrap opens room via ProducedQty < PlannedQty
+            return orders.Sum(p => 
+                p.Status == "Completed" ? p.ProducedQuantity : p.PlannedQuantity);
         }
         public async Task<IEnumerable<ProdOrder>> GetAllAsync()
         {

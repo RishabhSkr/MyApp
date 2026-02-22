@@ -1,5 +1,7 @@
 using BackendAPI.Dtos.Production;
 using BackendAPI.Services.Production;
+using BackendAPI.Data;
+using BackendAPI.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BackendAPI.Controllers
@@ -9,10 +11,20 @@ namespace BackendAPI.Controllers
     public class ProductionController : ControllerBase
     {
         private readonly IProductionService _service;
+        private readonly AppDbContext _context;
 
-        public ProductionController(IProductionService service)
+        public ProductionController(IProductionService service, AppDbContext context)
         {
             _service = service;
+            _context = context;
+        }
+
+        // Get next auto-generated Order Number (frontend pre-fill ke liye)
+        [HttpGet("next-order-number")]
+        public async Task<IActionResult> GetNextOrderNumber()
+        {
+            var nextNumber = await OrderNumberGenerator.GenerateAsync(_context);
+            return Ok(new { orderNumber = nextNumber });
         }
 
         // 0.GET: api/Production/orders?salesOrderId=101
@@ -53,7 +65,7 @@ namespace BackendAPI.Controllers
             var result = await _service.CreateProductionPlanAsync(dto, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Production Planned Successfully!" });
+                return Ok(new { message = "Production Order Created Successfully!" });
             
             return BadRequest(new { error = result });
         }
@@ -80,7 +92,7 @@ namespace BackendAPI.Controllers
             var result = await _service.CancelProductionOrderAsync(id, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Order Cancelled. Material Restored to Inventory. ✅" });
+                return Ok(new { message = "Production Order Cancelled." });
 
             return BadRequest(new { error = result });
         }
@@ -92,8 +104,25 @@ namespace BackendAPI.Controllers
             Guid userId = Guid.NewGuid(); 
             var result = await _service.CompleteProductionAsync(dto, userId);
 
-            if (result == "Success")
-                return Ok(new { message = "Production Completed. Stock Updated!" });
+            if (result.StartsWith("Success"))
+            {
+                // Parse: "Success|Planned:300|Produced:280|Scrap:10|UnusedReturned:10"
+                var parts = result.Split('|').Skip(1)
+                    .Select(p => p.Split(':'))
+                    .ToDictionary(p => p[0], p => decimal.Parse(p[1]));
+
+                return Ok(new
+                {
+                    message = "Production Completed ✅",
+                    summary = new
+                    {
+                        planned = parts.GetValueOrDefault("Planned"),
+                        produced = parts.GetValueOrDefault("Produced"),
+                        scrap = parts.GetValueOrDefault("Scrap"),
+                        unusedReturned = parts.GetValueOrDefault("UnusedReturned")
+                    }
+                });
+            }
 
             return BadRequest(new { error = result });
         }
@@ -112,14 +141,14 @@ namespace BackendAPI.Controllers
         }
 
         // 6. UPDATE QTY: Only for "Created" orders
-        [HttpPut("update-qty/{id}")]
-        public async Task<IActionResult> UpdateQty(Guid id, [FromQuery] decimal newQuantity)
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateProductionOrder(Guid id, [FromBody] UpdateProductionDto dto)
         {
             Guid userId = Guid.NewGuid(); // TODO: JWT
-            var result = await _service.UpdateProductionQtyAsync(id, newQuantity, userId);
+            var result = await _service.UpdateProductionOrderAsync(id,dto.PlannedStartDate,dto.PlannedEndDate, dto.NewQuantity, userId);
 
             if (result == "Success")
-                return Ok(new { message = "Quantity Updated! ✅" });
+                return Ok(new { message = "Order Updated." });
 
             return BadRequest(new { error = result });
         }

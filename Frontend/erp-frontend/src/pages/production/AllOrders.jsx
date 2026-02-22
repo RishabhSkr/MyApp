@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { getAllBatches } from '../../api/productionService';
 import FilterBar from '../../components/common/FilterBar';
 import useApi from '../../hooks/useApi'; // 1. Import Hook
-import { Factory, Calendar, CheckCircle, AlertTriangle, PlayCircle } from 'lucide-react';
+import { Factory, Calendar, CheckCircle, AlertTriangle, PlayCircle, ArrowDownAZ, ArrowLeftToLine, ArrowLeftIcon } from 'lucide-react';
 
 const Production = () => {
     const [orders, setOrders] = useState([]);
     const [filterId, setFilterId] = useState('');
-
+    console.log(orders);
     // hook API Calls
     const { loading: isLoading, requestHandlerFunction } = useApi();
 
@@ -29,24 +29,26 @@ const Production = () => {
         loadOrders();
     }, [fetchOrders]);
     
-    
-    // Handlers
-    const handleSearch = () => {
-        if(filterId) fetchOrders(filterId);
-    };
+    const filteredOrders = orders.filter(order => {
+    if (!filterId) return true;
+    const search = filterId.toLowerCase();
+    return order.orderNumber.toLowerCase().includes(search) 
+        || order.salesOrderId.toLowerCase().includes(search);
+    });
+
 
     const handleClear = () => {
         setFilterId(''); 
         fetchOrders(null); 
     };
 
-    // Helper Functions  
     const getStatusColor = (status) => {
         const safeStatus = String(status || '').toLowerCase();
-        switch (safeStatus?.toLowerCase()) {
+        switch (safeStatus) {
             case 'completed': return 'bg-green-100 text-green-700 border-green-200';
             case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
-            case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            case 'created': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            case 'released': return 'bg-purple-100 text-purple-700 border-purple-200';
             case 'in progress': return 'bg-blue-100 text-blue-700 border-blue-200';
             default: return 'bg-gray-100 text-gray-700 border-gray-200';
         }
@@ -71,10 +73,10 @@ const Production = () => {
                     <FilterBar
                         value={filterId}           
                         onChange={setFilterId}     
-                        onSearch={handleSearch}
+                        onSearch={() => {}}
                         onClear={handleClear}
-                        placeholder="Search by Sales Order ID"
-                        type="number"
+                        placeholder="Search by PO or SO ID"
+                        type="text"
                     />
 
                     <div className="text-sm text-gray-500 whitespace-nowrap">
@@ -93,8 +95,11 @@ const Production = () => {
                                 <th className="px-6 py-4 text-center">Batch Qty</th>
                                 <th className="px-6 py-4 text-center">Produced </th>
                                 <th className="px-6 py-4 text-center">Scrap</th>
+                                <th className="px-6 py-4 text-center">Unused Returned Qty</th>
                                 <th className="px-6 py-4">Status</th>
                                 <th className="px-6 py-4">Timeline</th>
+                                <th className="px-6 py-4">CreatedBy</th>
+                                {/* <th className="px-6 py-4">UpdatedBy</th> */}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -118,11 +123,11 @@ const Production = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                orders.map((order) => (
+                                filteredOrders.map((order) => (
                                     <tr key={order.productionOrderId} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 font-mono text-gray-500">
-                                            #{order.productionOrderId}
-                                            <div className="text-xs text-blue-400 mt-1">SO #{order.salesOrderId}</div>
+                                        <td className="px-6 py-4 font-mono text-slate-700">
+                                            <span className="font-semibold">{order.orderNumber || '—'}</span>
+                                            <div className="text-xs text-gray-400 mt-1">SO #{String(order.salesOrderId).slice(0,8)}...</div>
                                         </td>
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {order.productName}
@@ -140,7 +145,12 @@ const Production = () => {
                                                 <AlertTriangle size={12} /> {order.scrapQuantity}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="text-red-600 font-medium flex items-center gap-1 justify-center">
+                                                <ArrowLeftIcon size={12} /> {order.unusedReturnedQuantity}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(order.status)}`}>
                                                 {order.status}
                                             </span>
@@ -148,21 +158,27 @@ const Production = () => {
                                         <td className="px-6 py-4 text-xs text-gray-500 space-y-1">
                                             <div className="flex items-center gap-1" title="Planned Date">
                                                 <Calendar size={12} className="text-gray-400" /> 
-                                                <span>Plan: {formatDate(order.plannedDate)}</span>
+                                                <span>PlanStart: {formatDate(order.plannedStartDate)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1" title="Planned Date">
+                                                <Calendar size={12} className="text-gray-400" /> 
+                                                <span>PlanEnd: {formatDate(order.plannedEndDate)}</span>
                                             </div>
                                             {order.actualStartDate && (
                                                 <div className="flex items-center gap-1 text-blue-600" title="Actual Start">
                                                     <PlayCircle size={12} /> 
-                                                    <span>Start: {formatDate(order.actualStartDate)}</span>
+                                                    <span>ActualStart: {formatDate(order.actualStartDate)}</span>
                                                 </div>
                                             )}
                                             {order.actualEndDate && (
                                                 <div className="flex items-center gap-1 text-green-600" title="Actual End">
                                                     <CheckCircle size={12} /> 
-                                                    <span>End: {formatDate(order.actualEndDate)}</span>
+                                                    <span>ActualEnd: {formatDate(order.actualEndDate)}</span>
                                                 </div>
                                             )}
                                         </td>
+                                        <td className="px-6 py-4 text-xs text-center">{String(order.createdByUserId).slice(0,8)}...</td>
+                                        {/* <td className="px-6 py-4 text-xs text-center">{String(order.updatedByUserId).slice(0,8)}...</td> */}
                                     </tr>
                                 ))
                             )}

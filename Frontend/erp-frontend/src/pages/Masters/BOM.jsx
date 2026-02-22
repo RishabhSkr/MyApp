@@ -3,6 +3,7 @@ import { getProducts } from '../../api/master/product';
 import { getRawMaterials } from '../../api/master/rawMaterial';
 import { Layers, Save, Plus, Trash2, Edit2, AlertCircle, Calendar, User, Info } from 'lucide-react';
 import { useBom } from '../../hooks/useBom';
+import toast from 'react-hot-toast';
 
 const BOM = () => {
 
@@ -13,8 +14,9 @@ const BOM = () => {
     // Editor State
     const [bomItems, setBomItems] = useState([]); 
     const [bomMetadata, setBomMetadata] = useState(null); 
-    const [isEditMode, setIsEditMode] = useState(false); 
+    const [isEditMode, setIsEditMode] = useState(false);
 
+    // console.log('bomMetadata', bomMetadata);    
     // Hook integration 
     const { loading, createBOM, updateBOM, deleteBOM, getBOMByProductId,boms} = useBom();
     
@@ -52,11 +54,13 @@ const BOM = () => {
 
         try {
             const data = await getBOMByProductId(productId);
-            
+            console.log('data',data)
             // Backend returns { productId, productName, materials: [...] }
             if (data && data.materials && data.materials.length > 0) {
                 setIsEditMode(true);
                 setBomMetadata({
+                    bomNumber: data.bomNumber,
+                    version: data.version,
                     createdAt: data.createdAt,
                     updatedAt: data.updatedAt,
                     createdBy: data.createdByUserId,
@@ -108,15 +112,23 @@ const BOM = () => {
     };
 
     // 5. Save Logic
-    const handleSave = async () => {
-        if (!selectedProduct) return alert('Select a product first.');
+const handleSave = async () => {
+    if (!selectedProduct) return alert('Select a product first.');
 
-        const validItems = bomItems.filter(i => i.rawMaterialId && i.quantity > 0);
-        if (validItems.length === 0) return alert('Add at least one material.');
+    const validItems = bomItems.filter(i => i.rawMaterialId && i.quantity > 0);
+    if (validItems.length === 0) return alert('Add at least one material.');
+
+    // Duplicate check — same material cannot appear twice
+    const materialIds = validItems.map(i => i.rawMaterialId);
+    const duplicates = materialIds.filter((id, idx) => materialIds.indexOf(id) !== idx);
+    if (duplicates.length > 0) {
+        const dupNames = duplicates.map(id => materials.find(m => m.id === id)?.name || id);
+        return toast.error(`Duplicate material found: ${dupNames.join(', ')}. Each material can only appear once.`);
+    }
         const payload = {
-            productId: parseInt(selectedProduct),
+            productId: selectedProduct,
             bomItems: validItems.map(i => ({
-                rawMaterialId: parseInt(i.rawMaterialId),
+                rawMaterialId: i.rawMaterialId,
                 quantityRequired: parseFloat(i.quantity),
             })),
         };
@@ -127,7 +139,9 @@ const BOM = () => {
             await createBOM(payload);
             setIsEditMode(true);
         }
-    };
+    // Re-fetch latest BOM data after save (no reload needed)
+    await loadRecipe(selectedProduct);
+};
 
     // 6. Delete Logic
     const handleDelete = async () => {
@@ -198,22 +212,30 @@ const BOM = () => {
 
                         {/* Metadata Panel */}
                         {bomMetadata && isEditMode && (
-                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-600">
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-100 grid grid-cols-3 md:grid-cols-6 gap-4 text-xs text-gray-600">
+                                <div>
+                                    <span className="block text-gray-400 mb-1 flex items-center gap-1"><Layers size={12}/> BOM Number</span>
+                                    <span className="font-bold text-purple-700 text-sm">{bomMetadata.bomNumber || '-'}</span>
+                                </div>
+                                <div className="ml-6">
+                                    <span className="block text-gray-400 mb-1">Version</span>
+                                    <span className="font-bold text-blue-600 text-sm">v{bomMetadata.version || '1.0'}</span>
+                                </div>
                                 <div>
                                     <span className="block text-gray-400 mb-1 flex items-center gap-1"><Calendar size={12}/> Created At</span>
                                     <span className="font-medium">{bomMetadata.createdAt ? new Date(bomMetadata.createdAt).toLocaleDateString() : '-'}</span>
-                                </div>
-                                <div>
-                                    <span className="block text-gray-400 mb-1 flex items-center gap-1"><User size={12}/> Created By</span>
-                                    <span className="font-medium">User #{bomMetadata.createdBy || '-'}</span>
                                 </div>
                                 <div>
                                     <span className="block text-gray-400 mb-1 flex items-center gap-1"><Calendar size={12}/> Updated At</span>
                                     <span className="font-medium">{bomMetadata.updatedAt ? new Date(bomMetadata.updatedAt).toLocaleDateString() : '-'}</span>
                                 </div>
                                 <div>
+                                    <span className="block text-gray-400 mb-1 flex items-center gap-1"><User size={12}/> Created By</span>
+                                    <span className="font-medium">{bomMetadata.createdBy ? String(bomMetadata.createdBy).slice(0,8) + '...' : '-'}</span>
+                                </div>
+                                <div>
                                     <span className="block text-gray-400 mb-1 flex items-center gap-1"><User size={12}/> Updated By</span>
-                                    <span className="font-medium">User #{bomMetadata.updatedBy || '-'}</span>
+                                    <span className="font-medium">{bomMetadata.updatedBy ? String(bomMetadata.updatedBy).slice(0,8) + '...' : '-'}</span>
                                 </div>
                             </div>
                         )}
@@ -329,8 +351,9 @@ const BOM = () => {
                             >
                                 <div className="min-w-0">
                                     <h4 className="font-medium text-gray-800 truncate">{bom.productName}</h4>
+                                    <p className="text-xs text-purple-600 font-mono">{bom.bomNumber || ''}</p>
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
-                                        <Layers size={10}/> {bom.materials?.length || 0} Ingredients
+                                        <Layers size={10}/> {bom.materials?.length || 0} Ingredients · v{bom.version || '1.0'}
                                     </p>
                                 </div>
                                 <Edit2 size={16} className={`text-gray-300 group-hover:text-purple-500 transition ${selectedProduct == bom.productId ? 'text-purple-500' : ''}`} />

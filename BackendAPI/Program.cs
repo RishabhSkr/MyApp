@@ -27,12 +27,18 @@ builder.Services.AddScoped<IBomRepository, BomRepository>();
 // Services
 builder.Services.AddScoped<IBomService, BomService>();
 builder.Services.AddScoped<IProductionService,ProductionService>();
-builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client => 
-    client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"]??"")
-);
-builder.Services.AddHttpClient<ISalesServiceClient, SalesServiceClient>(client => 
-    client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"]??"")
-);
+
+// TODO: Switch to real HTTP clients when other services are ready
+// builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client => 
+//     client.BaseAddress = new Uri(builder.Configuration["Microservices:InventoryServiceUrl"]??"")
+// );
+// builder.Services.AddHttpClient<ISalesServiceClient, SalesServiceClient>(client => 
+//     client.BaseAddress = new Uri(builder.Configuration["Microservices:SalesServiceUrl"]??"")
+// );
+
+// MOCK clients for local testing (no external services needed)
+builder.Services.AddSingleton<ISalesServiceClient, BackendAPI.HttpClients.Mock.MockSalesServiceClient>();
+builder.Services.AddSingleton<IInventoryServiceClient, BackendAPI.HttpClients.Mock.MockInventoryServiceClient>();
 
 
 builder.Services.AddControllers();
@@ -45,7 +51,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173") 
+            policy.WithOrigins("http://localhost:5180") 
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

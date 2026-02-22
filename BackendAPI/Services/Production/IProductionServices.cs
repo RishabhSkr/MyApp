@@ -14,6 +14,6 @@ namespace BackendAPI.Services.Production
         Task<string> CompleteProductionAsync(CompleteProductionDto dto, Guid userId);
         Task<string> CancelProductionOrderAsync(Guid productionOrderId, Guid userId);
         Task<string> ReleaseProductionOrderAsync(Guid productionOrderId, Guid userId);
-        Task<string> UpdateProductionQtyAsync(Guid productionOrderId, decimal newQuantity, Guid userId);
+        Task<string> UpdateProductionOrderAsync(Guid productionOrderId,DateTime plannedStartDate,DateTime plannedEndDate, decimal newQuantity, Guid userId);
     }
 }

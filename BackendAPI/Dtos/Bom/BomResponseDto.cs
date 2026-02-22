@@ -6,6 +6,8 @@ namespace BackendAPI.Dtos.Bom
     {
         public Guid ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public string BomNumber { get; set; } = string.Empty;
+        public decimal Version { get; set; }
         
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

@@ -1,13 +1,16 @@
 namespace BackendAPI.Utilities;
 
 /// <summary>
-/// Max-Min K Batch Optimizer — Machine Efficiency Maximizer
+/// Optimal Batch Allocation — Greedy + Borrowing Algorithm
 /// 
-/// Goal: Divide total production qty into N batches where:
-///   - Each batch's efficiency (batchQty / machineCapacity) is MAXIMIZED
-///   - Every batch >= 50% efficiency (MIN threshold)
-///   - Target >= 95% efficiency (OPTIMAL threshold)
-///   - Even distribution preferred over uneven (no [300,300,300,100] waste)
+/// Goal: Divide D (total qty) into batches of max M (machine capacity) where:
+///   1. No batch exceeds M (capacity constraint)
+///   2. Every batch >= 50% of M (minimum utilization)
+///   3. MAXIMIZE number of batches at exactly 100% (M)
+///   4. If remainder < 50%, borrow from last full batch to redistribute
+///
+/// Time Complexity: O(N) where N = number of batches
+/// Space Complexity: O(N) for the result array
 /// </summary>
 public static class BatchOptimizer
 {
@@ -15,58 +18,86 @@ public static class BatchOptimizer
     public const decimal OPTIMAL_EFFICIENCY_THRESHOLD = 95m;  // 95%
 
     /// <summary>
-    /// Main method: finds optimal N batches with even distribution
-    /// Returns BatchSuggestion with individual batch sizes and efficiency
+    /// Main method: Greedy allocation with borrowing fallback
+    /// Maximizes 100% capacity batches, borrows to fix remainder
     /// </summary>
     public static BatchSuggestion GetOptimalBatchPlan(decimal totalQty, decimal machineCapacity)
     {
         if (totalQty <= 0 || machineCapacity <= 0)
-            return new BatchSuggestion { TotalQty = totalQty, MachineCapacity = machineCapacity };
+            return new BatchSuggestion();
 
-        // Step 1: Minimum batches needed
-        int n = (int)Math.Ceiling(totalQty / machineCapacity);
+        var batchSizes = OptimalAllocation(totalQty, machineCapacity);
 
-        // Step 2: Even distribution — maximize minimum batch size
-        var batchSizes = DistributeEvenly(totalQty, n);
-
-        // Step 3: Calculate efficiencies
         decimal minBatch = batchSizes.Min();
-        decimal maxBatch = batchSizes.Max();
         decimal minEfficiency = GetEfficiency(minBatch, machineCapacity);
-        decimal avgEfficiency = GetEfficiency(totalQty / n, machineCapacity);
+        int fullBatches = batchSizes.Count(b => b == machineCapacity);
 
         return new BatchSuggestion
         {
-            TotalQty = totalQty,
-            MachineCapacity = machineCapacity,
-            SuggestedBatches = n,
-            SuggestedBatchSize = maxBatch,       // largest batch (for reference)
+            SuggestedBatches = batchSizes.Count,
+            SuggestedBatchSize = batchSizes.Max(),
             BatchSizes = batchSizes,
-            MinEfficiency = minEfficiency,        // worst batch efficiency
-            AvgEfficiency = avgEfficiency,        // average efficiency
-            IsOptimal = minEfficiency >= OPTIMAL_EFFICIENCY_THRESHOLD,
-            IsAcceptable = minEfficiency >= MIN_EFFICIENCY_THRESHOLD
+            MinEfficiency = minEfficiency,
+            FullCapacityBatches = fullBatches
         };
     }
 
     /// <summary>
-    /// Distributes totalQty evenly across n batches
-    /// Example: 1000 / 3 = [334, 333, 333] (not [400, 400, 200])
+    /// Core Algorithm: Greedy + Borrow
+    /// 
+    /// 1. Fill as many full batches (M) as possible
+    /// 2. If remainder >= 50% of M → add as last batch ✅
+    /// 3. If remainder < 50% of M → borrow from last full batch, redistribute ✅
+    /// 4. Edge case: D < 50% of M → single batch [D] ✅
     /// </summary>
-    public static List<decimal> DistributeEvenly(decimal totalQty, int n)
+    public static List<decimal> OptimalAllocation(decimal D, decimal M)
     {
-        if (n <= 0) return new List<decimal> { totalQty };
+        var result = new List<decimal>();
 
-        decimal baseSize = Math.Floor(totalQty / n);
-        decimal remainder = totalQty - (baseSize * n);
+        // 50% threshold (ceil for odd M)
+        decimal minReq = Math.Ceiling(M / 2);
 
-        var batches = new List<decimal>();
-        for (int i = 0; i < n; i++)
+        // Edge Case: total qty is less than minimum threshold
+        if (D < minReq)
         {
-            // First 'remainder' batches get +1 extra unit
-            batches.Add(i < remainder ? baseSize + 1 : baseSize);
+            result.Add(D);
+            return result;
         }
-        return batches;
+
+        int q = (int)(D / M);       // Number of full 100% batches
+        decimal R = D % M;          // Remainder
+
+        if (R == 0)
+        {
+            // Perfect division — all batches at 100%
+            for (int i = 0; i < q; i++)
+                result.Add(M);
+        }
+        else if (R >= minReq)
+        {
+            // Remainder passes 50% rule — no borrowing needed
+            for (int i = 0; i < q; i++)
+                result.Add(M);
+            result.Add(R);
+        }
+        else
+        {
+            // *** BORROWING ALGORITHM ***
+            // Remainder too small → sacrifice ONE full batch
+            for (int i = 0; i < q - 1; i++)
+                result.Add(M);
+
+            // Pool the last full batch + remainder
+            decimal pool = M + R;
+
+            // Split: keep first as high as possible, last at minimum
+            result.Add(pool - minReq);
+            result.Add(minReq);
+        }
+
+        // Return in descending order
+        result.Sort((a, b) => b.CompareTo(a));
+        return result;
     }
 
     /// <summary>
@@ -78,49 +109,6 @@ public static class BatchOptimizer
         if (machineCapacity <= 0) return 0;
         return Math.Round((batchQty / machineCapacity) * 100, 2);
     }
-
-    /// <summary>
-    /// Binary Search: Find max K (minimum batch fill) across given batches
-    /// Used for non-uniform machine capacities (future extension)
-    /// </summary>
-    public static decimal FindMaxMinK(decimal D, List<decimal> batches)
-    {
-        if (D <= 0 || !batches.Any()) return 0;
-
-        decimal low = 1;
-        decimal high = D;
-        decimal ans = 0;
-
-        while (low <= high)
-        {
-            decimal mid = Math.Floor((low + high) / 2);
-
-            if (CanDistribute(mid, D, batches))
-            {
-                ans = mid;
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-        return ans;
-    }
-
-    private static bool CanDistribute(decimal K, decimal D, List<decimal> batches)
-    {
-        if (K == 0) return true;
-
-        var validBatches = batches.Where(m => m >= K).OrderByDescending(m => m).ToList();
-        if (!validBatches.Any()) return false;
-
-        int maxAllowed = (int)(D / K);
-        if (maxAllowed == 0) return false;
-
-        var chosen = validBatches.Take(maxAllowed).ToList();
-        return chosen.Sum() >= D;
-    }
 }
 
 /// <summary>
@@ -128,13 +116,9 @@ public static class BatchOptimizer
 /// </summary>
 public class BatchSuggestion
 {
-    public decimal TotalQty { get; set; }
-    public decimal MachineCapacity { get; set; }
     public int SuggestedBatches { get; set; } = 1;
-    public decimal SuggestedBatchSize { get; set; }      // Reference (max batch)
-    public List<decimal> BatchSizes { get; set; } = new();  // Actual sizes per batch
-    public decimal MinEfficiency { get; set; }   // Worst batch efficiency %
-    public decimal AvgEfficiency { get; set; }   // Average efficiency %
-    public bool IsOptimal { get; set; }          // Min efficiency >= 95%
-    public bool IsAcceptable { get; set; }       // Min efficiency >= 50%
+    public decimal SuggestedBatchSize { get; set; }
+    public List<decimal> BatchSizes { get; set; } = new();
+    public decimal MinEfficiency { get; set; }          // Warning ke liye
+    public int FullCapacityBatches { get; set; }        // Kitne 100% pe hain
 }

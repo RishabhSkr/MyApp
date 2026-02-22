@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, AlertTriangle, Package, CalendarClock, Beaker } from 'lucide-react';
+import { getEfficiencyWarning } from '../../utility/batchUtils';
+import SmartBatchCard from './SmartBatchCard';
 
 const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
     const [batchQty, setBatchQty] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-
+    const [forceCreate, setForceCreate] = useState(false);
+    const efficiencyWarning = getEfficiencyWarning(data, batchQty);
     // Reset form when modal opens
     useEffect(() => {
         const resetForm = () => {
@@ -29,12 +32,12 @@ const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
     const isValid = batchQty > 0 && batchQty <= maxAllowed && startDate && endDate;
 
     const handleConfirm = () => {
-        onConfirm(batchQty, startDate, endDate);
+        onConfirm(batchQty, startDate, endDate, forceCreate);
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 animate-in fade-in">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden">
                 
                 {/* Header */}
                 <div className="flex justify-between items-center p-4 border-b bg-slate-50">
@@ -45,15 +48,19 @@ const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
                 </div>
 
                 {/* Body */}
-                <div className="p-6">
+                <div className="p-6 flex gap-6">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div>
-                            Checking Inventory & Capacity...
+                        <div className="flex-1">
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                                <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-2"></div>
+                                Checking Inventory & Capacity...
+                            </div>
                         </div>
                     ) : data ? (
-                        <div className="space-y-6">
-                            {/* Product Info (Same as before) */}
+                        <>
+                        {/* LEFT: Form */}
+                        <div className="flex-1 space-y-6">
+                            {/* Product Info */}
                             <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-md border border-blue-100">
                                 <div className="bg-blue-200 p-2 rounded text-blue-700">
                                     <Package size={20} />
@@ -110,6 +117,32 @@ const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
                                         onChange={(e) => setBatchQty(e.target.value)}
                                     />
                                     <p className="text-xs text-gray-400 mt-1">Available to produce: {maxAllowed}</p>
+                                    
+                                    {/* Efficiency Warning */}
+                                    {efficiencyWarning && (
+                                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-300 mt-2">
+                                            {efficiencyWarning.type === 'lowEfficiency' ? (
+                                                <p className="text-amber-800 text-sm font-medium">
+                                                    ⚠️ Last batch efficiency: {efficiencyWarning.efficiency}% 
+                                                    ({efficiencyWarning.lastBatch}/{efficiencyWarning.capacity} per day)
+                                                </p>
+                                            ) : (
+                                                <p className="text-red-700 text-sm font-medium">
+                                                    ⚠️ Cannot produce more than available: {efficiencyWarning.availableQtyToProduce}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    {/* Force Create — works for both efficiency warning & buffer cap */}
+                                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                        <input 
+                                            type="checkbox"
+                                            checked={forceCreate}
+                                            onChange={(e) => setForceCreate(e.target.checked)}
+                                            className="w-4 h-4 accent-amber-600"
+                                        />
+                                        <span className="text-sm text-gray-600">Force Create (ignore batch efficiency warning)</span>
+                                    </label>
                                 </div>
 
                                 {/* Date Inputs */}
@@ -129,14 +162,19 @@ const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
                                             type="date"
                                             className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                             value={endDate}
-                                            min={startDate} // End date can't be before start date
+                                            min={startDate}
                                             onChange={(e) => setEndDate(e.target.value)}
                                         />
                                     </div>
                                 </div>
                             </div>
-
                         </div>
+
+                        {/* RIGHT: Smart Batch Card */}
+                        <div className="w-72">
+                            <SmartBatchCard planningInfo={data} onUseSuggestion={(qty) => setBatchQty(qty)} />
+                        </div>
+                        </>
                     ) : (
                         <p className="text-red-500">Failed to load planning info.</p>
                     )}

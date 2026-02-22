@@ -7,7 +7,6 @@ namespace BackendAPI.Dtos.Production
         [Required]
         public Guid SalesOrderId { get; set; }
 
-        // Quantity to Produce
         [Required]
         [Range(1, 1000000, ErrorMessage = "Quantity must be greater than 0")]
         public decimal QuantityToProduce { get; set; }
@@ -20,8 +19,12 @@ namespace BackendAPI.Dtos.Production
         [Required]
         public DateTime PlannedEndDate { get; set; }
 
-        // ForceCreate = true: User jaanta hai batch chhota hai, machine efficient nahi chalegi
-        // but phir bhi create karna hai (suggested batch ignore karke)
+        // Optional: User apna custom OrderNumber de sakta hai
+        // Agar empty hai toh system auto-generate karega (PO-YYYYMMDD-XXXX)
+        
+        public string? CustomOrderNumber { get; set; }
+
+        // ForceCreate = true: suggested batch ignore karke
         public bool ForceCreate { get; set; } = false;
     }
 }

@@ -4,6 +4,7 @@ using BackendAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BackendAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221112039_AddOrderNumber")]
+    partial class AddOrderNumber
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -27,11 +30,6 @@ namespace BackendAPI.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("BomNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -58,17 +56,13 @@ namespace BackendAPI.Migrations
                     b.Property<Guid>("UpdatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("Version")
-                        .HasPrecision(5, 1)
-                        .HasColumnType("decimal(5,1)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId", "RawMaterialId")
                         .IsUnique()
                         .HasFilter("[IsActive] = 1");
 
-                    b.ToTable("BOMs", (string)null);
+                    b.ToTable("BOMs");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.ProductionOrder", b =>
@@ -94,8 +88,7 @@ namespace BackendAPI.Migrations
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("PlannedEndDate")
                         .HasColumnType("datetime2");
@@ -125,10 +118,6 @@ namespace BackendAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("UnusedReturnedQuantity")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -137,10 +126,7 @@ namespace BackendAPI.Migrations
 
                     b.HasKey("ProductionOrderId");
 
-                    b.HasIndex("OrderNumber")
-                        .IsUnique();
-
-                    b.ToTable("ProductionOrders", (string)null);
+                    b.ToTable("ProductionOrders");
                 });
 #pragma warning restore 612, 618
         }

@@ -11,7 +11,6 @@ namespace BackendAPI.Dtos.Bom
         [Required]
         [MinLength(1, ErrorMessage = "At least one material is required")]
         public List<BomCreateItemDto> BomItems { get; set; } = new();
-        // Testing ke liye add karein (Baad mein hata dena)
         // public int CreatedByUserId { get; set; }
     }
 

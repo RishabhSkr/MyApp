@@ -15,8 +15,7 @@ namespace BackendAPI.Dtos.Production
         public int SuggestedBatches { get; set; }
         public decimal SuggestedBatchSize { get; set; }
         public List<decimal> BatchSizes { get; set; } = new();   // Individual batch sizes
-        public decimal MinEfficiency { get; set; }    // Worst batch efficiency %
-        public decimal AvgEfficiency { get; set; }    // Average efficiency %
-        public bool IsOptimal { get; set; }           // >= 95%
+        public decimal MinEfficiency { get; set; }    // Worst batch — warning ke liye
+        public int FullCapacityBatches { get; set; }  // Kitne batches 100% pe hain
     }   
 }
