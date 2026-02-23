@@ -43,6 +43,26 @@ namespace BackendAPI.Services.Production
             foreach(var p in orders)
             {
                 var product = await _inventoryService.GetProductAsync(p.ProductId);
+
+                // Get locked BOM materials for this order
+                var bomMaterials = new List<Dtos.Bom.BomMaterialDto>();
+                if (!string.IsNullOrEmpty(p.BomNumber))
+                {
+                    var boms = await _context.BOMs
+                        .Where(b => b.ProductId == p.ProductId && b.Version == p.BomVersion)
+                        .ToListAsync();
+                    var rmIds = boms.Select(b => b.RawMaterialId).ToList();
+                    var rawMats = await _inventoryService.GetRawMaterialsByIdsAsync(rmIds);
+                    bomMaterials = boms.Select(b => {
+                        var rm = rawMats.FirstOrDefault(r => r.Id == b.RawMaterialId);
+                        return new Dtos.Bom.BomMaterialDto {
+                            RawMaterialName = rm?.Name ?? "Unknown",
+                            QuantityRequired = b.QuantityRequired,
+                            Uom = rm?.UOM ?? ""
+                        };
+                    }).ToList();
+                }
+
                 result.Add(new ProductionOrderListDto
                 {
                     ProductionOrderId = p.ProductionOrderId,
@@ -59,8 +79,10 @@ namespace BackendAPI.Services.Production
                     ActualStartDate = p.ActualStartDate,
                     ActualEndDate = p.ActualEndDate,
                     CreatedByUserId = p.CreatedByUserId,
-                    UpdatedByUserId = p.UpdatedByUserId
-
+                    UpdatedByUserId = p.UpdatedByUserId,
+                    BomNumber = p.BomNumber,
+                    BomVersion = p.BomVersion,
+                    BomMaterials = bomMaterials
                 }); 
             }
             return result;
@@ -173,6 +195,16 @@ namespace BackendAPI.Services.Production
 
             var suggestion = BatchOptimizer.GetOptimalBatchPlan(available, capacity);
 
+            // Prepare BOM materials list for frontend
+            var bomMaterialsList = bom.Select(b => {
+                var rm = rawMaterials.FirstOrDefault(r => r.Id == b.RawMaterialId);
+                return new Dtos.Bom.BomMaterialDto {
+                    RawMaterialName = rm?.Name ?? "Unknown",
+                    QuantityRequired = b.QuantityRequired,
+                    Uom = rm?.UOM ?? ""
+                };
+            }).ToList();
+
             return new ProductionPlanningInfoDto
             {
                 SalesOrderId = so.Id,
@@ -185,7 +217,10 @@ namespace BackendAPI.Services.Production
                 SuggestedBatchSize = suggestion.SuggestedBatchSize,
                 BatchSizes = suggestion.BatchSizes,
                 MinEfficiency = suggestion.MinEfficiency,
-                FullCapacityBatches = suggestion.FullCapacityBatches
+                FullCapacityBatches = suggestion.FullCapacityBatches,
+                BomNumber = bom.FirstOrDefault()?.BomNumber ?? "",
+                BomVersion = bom.FirstOrDefault()?.Version ?? 0,
+                BomMaterials = bomMaterialsList
             };
         }
 
@@ -204,6 +239,7 @@ namespace BackendAPI.Services.Production
                 // Product info for capacity check
                 var product = await _inventoryService.GetProductAsync(so.ProductId);
                 decimal maxCap = product?.MaxDailyCapacity ?? 0;
+               
 
                 // HARD LIMIT: Batch cannot exceed machine capacity 
                 if (maxCap > 0 && dto.QuantityToProduce > maxCap)
@@ -248,6 +284,9 @@ namespace BackendAPI.Services.Production
                     // System auto-generate (PO-YYYYMMDD-XXXX)
                     orderNumber = await OrderNumberGenerator.GenerateAsync(_context);
                 }
+                var currentBom = await _context.BOMs
+                                .FirstOrDefaultAsync(b => b.ProductId == so.ProductId && b.IsActive);
+                if (currentBom == null) return "Error: No BOM found for this product.";
 
                 // Create PO (status = "Created", NO inventory reservation yet)
                 var po = new ProdOrder
@@ -259,6 +298,8 @@ namespace BackendAPI.Services.Production
                     PlannedStartDate = dto.PlannedStartDate,
                     PlannedEndDate = dto.PlannedEndDate,
                     Status = EventStatus.CREATED,
+                    BomNumber = currentBom.BomNumber,
+                    BomVersion = currentBom.Version,
                     CreatedByUserId = userId
                 };
                 await _repo.AddAsync(po);
@@ -288,7 +329,7 @@ namespace BackendAPI.Services.Production
 
             // BOM se material list laao
             var boms = await _context.BOMs
-                        .Where(b => b.ProductId == po.ProductId && b.IsActive)
+                        .Where(b => b.ProductId == po.ProductId && b.Version == po.BomVersion)
                         .ToListAsync();
 
             if (!boms.Any()) return "Error: No BOM found for this product.";
@@ -391,7 +432,7 @@ namespace BackendAPI.Services.Production
                 if (unused > 0)
                 {
                     var boms = await _context.BOMs
-                                .Where(b => b.ProductId == po.ProductId && b.IsActive)
+                                .Where(b => b.ProductId == po.ProductId && b.Version == po.BomVersion)
                                 .ToListAsync();
 
                     var items = boms.Select(b => new MaterialItem

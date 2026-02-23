@@ -131,6 +131,9 @@ const Production = () => {
                                         </td>
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {order.productName}
+                                            {order.bomNumber && (
+                                                <div className="text-xs text-indigo-500 font-mono mt-0.5">📋 {order.bomNumber} v{order.bomVersion}</div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-center font-semibold text-slate-700">
                                             {order.batchQuantity}

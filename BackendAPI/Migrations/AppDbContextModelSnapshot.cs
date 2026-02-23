@@ -68,7 +68,7 @@ namespace BackendAPI.Migrations
                         .IsUnique()
                         .HasFilter("[IsActive] = 1");
 
-                    b.ToTable("BOMs", (string)null);
+                    b.ToTable("BOMs");
                 });
 
             modelBuilder.Entity("BackendAPI.Models.ProductionOrder", b =>
@@ -82,6 +82,13 @@ namespace BackendAPI.Migrations
 
                     b.Property<DateTime?>("ActualStartDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("BomNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("BomVersion")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -140,7 +147,7 @@ namespace BackendAPI.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
-                    b.ToTable("ProductionOrders", (string)null);
+                    b.ToTable("ProductionOrders");
                 });
 #pragma warning restore 612, 618
         }
