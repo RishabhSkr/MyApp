@@ -205,7 +205,12 @@ const OrderManagement = () => {
                                     <td className="p-4 font-mono text-gray-600">#{order.orderNumber}
                                         <div className="text-xs text-blue-400">SO #{String(order.salesOrderId).slice(0, 8)}</div>
                                     </td>
-                                    <td className="p-4 font-medium">{order.productName}</td>
+                                    <td className="p-4 font-medium">
+                                        {order.productName}
+                                        {order.bomNumber && (
+                                            <div className="text-xs text-indigo-500 font-mono mt-0.5">📋 {order.bomNumber} v{order.bomVersion}</div>
+                                        )}
+                                    </td>
                                     <td className="p-4 text-center">
                                         <div className="font-bold">{order.batchQuantity}</div>
                                         {order.status === 'Completed' && (

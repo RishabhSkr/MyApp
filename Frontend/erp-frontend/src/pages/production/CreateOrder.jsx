@@ -303,6 +303,34 @@ const CreateOrder = () => {
                                         ></div>
                                     </div>
                                 </div>
+                                {/* BOM Recipe — locked version info */}
+                                {planningInfo?.bomMaterials?.length > 0 && (
+                                    <div className="bg-white p-3 rounded border border-indigo-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-indigo-700 uppercase">📋 BOM Recipe</span>
+                                            <span className="text-xs text-indigo-500 font-mono">{planningInfo.bomNumber} v{planningInfo.bomVersion}</span>
+                                        </div>
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="text-gray-400 uppercase">
+                                                    <th className="text-left py-1">Material</th>
+                                                    <th className="text-right py-1">Qty</th>
+                                                    <th className="text-right py-1">UOM</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {planningInfo.bomMaterials.map((m, idx) => (
+                                                    <tr key={idx} className="border-t border-gray-50">
+                                                        <td className="py-1 text-slate-700">{m.rawMaterialName}</td>
+                                                        <td className="py-1 text-right font-mono text-slate-600">{m.quantityRequired}</td>
+                                                        <td className="py-1 text-right text-gray-400">{m.uom || '—'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
                                 {/* Smart Batch Suggestion */}
                                 
                                 <div className="mt-4">

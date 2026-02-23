@@ -56,6 +56,10 @@ namespace BackendAPI.Data
                 // OrderNumber must be unique + max 50 chars
                 e.Property(p => p.OrderNumber).HasMaxLength(50);
                 e.HasIndex(p => p.OrderNumber).IsUnique();
+
+                // BOM tracking
+                e.Property(p => p.BomNumber).HasMaxLength(50);
+                e.Property(p => p.BomVersion).HasPrecision(5, 1);
             });
 
             // BOM (Soft Delete hone only active pr unique contraint lagao)

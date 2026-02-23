@@ -1,6 +1,9 @@
 # Ignore build output
 bin/
+**/bin/
 /obj
+/Migrations
+
 
 # Ignore NuGet packages
 *.nupkg

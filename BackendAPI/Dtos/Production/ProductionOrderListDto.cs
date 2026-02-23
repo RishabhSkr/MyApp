@@ -1,3 +1,4 @@
+using BackendAPI.Dtos.Bom;
 namespace BackendAPI.Dtos.Production
 {
     // List of Production Orders for SO 
@@ -22,5 +23,8 @@ namespace BackendAPI.Dtos.Production
 
         public Guid CreatedByUserId { get; set; }
         public Guid UpdatedByUserId { get; set; }
+        public string BomNumber { get; set; } = string.Empty;
+        public decimal BomVersion { get; set; }
+        public List<BomMaterialDto> BomMaterials { get; set; } = new();
     }
 }

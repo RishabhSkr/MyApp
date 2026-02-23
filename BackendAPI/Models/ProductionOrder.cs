@@ -16,6 +16,11 @@ public class ProductionOrder : AuditableEntity
     public decimal ProducedQuantity { get; set; } = 0;
     public decimal ScrapQuantity { get; set; } = 0;
     public decimal UnusedReturnedQuantity { get; set; } = 0;
+    
+    // BOM reference
+    public string BomNumber { get; set; } = string.Empty;
+    public decimal BomVersion { get; set; }
+
     // State -> Planned - Release-Inprogress- Completed-Cancelled
     public string Status { get; set; }=EventStatus.PLANNED;
     public DateTime? PlannedStartDate { get; set; } 

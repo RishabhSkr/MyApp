@@ -1,3 +1,5 @@
+using BackendAPI.Dtos.Bom;
+
 namespace BackendAPI.Dtos.Production
 {   // for PO order creation
     public class ProductionPlanningInfoDto
@@ -17,5 +19,8 @@ namespace BackendAPI.Dtos.Production
         public List<decimal> BatchSizes { get; set; } = new();   // Individual batch sizes
         public decimal MinEfficiency { get; set; }    // Worst batch — warning ke liye
         public int FullCapacityBatches { get; set; }  // Kitne batches 100% pe hain
+        public string BomNumber { get; set; } = string.Empty;
+        public decimal BomVersion { get; set; }
+        public List<BomMaterialDto> BomMaterials { get; set; } = new();
     }   
 }

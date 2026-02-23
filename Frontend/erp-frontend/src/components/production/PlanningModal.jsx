@@ -93,7 +93,33 @@ const PlanningModal = ({ isOpen, onClose, data, isLoading, onConfirm }) => {
                                 </div>
                             </div>
 
-                            {/* Bottleneck Warning */}
+                            {/* BOM Materials — which recipe will be used */}
+                            {data.bomMaterials && data.bomMaterials.length > 0 && (
+                                <div className="border rounded-md overflow-hidden">
+                                    <div className="bg-indigo-50 px-3 py-2 border-b border-indigo-100 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">📋 BOM Recipe</span>
+                                        <span className="text-xs text-indigo-500 font-mono">{data.bomNumber} v{data.bomVersion}</span>
+                                    </div>
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
+                                                <th className="text-left px-3 py-1.5">Material</th>
+                                                <th className="text-right px-3 py-1.5">Qty/Unit</th>
+                                                <th className="text-right px-3 py-1.5">UOM</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {data.bomMaterials.map((m, idx) => (
+                                                <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50">
+                                                    <td className="px-3 py-1.5 text-slate-700">{m.rawMaterialName}</td>
+                                                    <td className="px-3 py-1.5 text-right font-mono text-slate-600">{m.quantityRequired}</td>
+                                                    <td className="px-3 py-1.5 text-right text-gray-400">{m.uom || '—'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                             {data.maxPossibleByMaterial < data.remainingQuantity && (
                                 <div className="flex gap-2 items-start text-sm text-amber-700 bg-amber-50 p-3 rounded border border-amber-200">
                                     <AlertTriangle size={18} className="mt-0.5 shrink-0" />
